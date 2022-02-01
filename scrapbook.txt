@@ -1,0 +1,62 @@
+func main() {
+	qmsg := new(Structs.S_QMSG)
+	qmsg.Key = "newKey"
+	qmsg.Message = "newMessage"
+	qmsg.Status = Structs.STATUS_PENDING
+	qmsg.Topic = "/a/b/c/#"
+	qmsg.StatusHistory = make(map[string]time.Time)
+	qmsg.StatusHistory[Structs.CREATED_AT] = time.Now()
+	fmt.Println(qmsg)
+
+	x := Structs.SerializeMsg(*qmsg)
+	fmt.Println(Structs.DeserializeMsg(&x))
+}
+
+
+
+	db, err := DButils.CreateDb("yousef", "/tmp/yousefTester")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+
+
+	db, err := DButils.CreateDb("yousef", "/tmp/yousefTester")
+	if err != nil {
+		log.Fatal(err)
+	}
+	x := Structs.CreateQMSG(db, "myTopic", "this is the long message")
+	DButils.SET(db, x.Key, Structs.SerializeMsg(x))
+	fmt.Println("'", string(x.Key), "'")
+	fmt.Println(">>>", DButils.GET(db, "pending:4e"))
+
+
+	// db, err := DButils.CreateDb("yousef", "/tmp/yousefTester")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// qmsg := Structs.Pull(db)
+	// fmt.Println(qmsg)
+
+	// for i, s := range DButils.GetAllPrefix(db, "failed") {
+	// 	fmt.Println(i, Structs.MsgToJson(Structs.DeserializeMsg(s)))
+	// }
+
+	//Structs.StartWatchDog(db)
+
+
+
+
+
+	db, err := DButils.CreateDb("yousef", "/tmp/yousefTester")
+	if err != nil {
+		log.Fatal(err)
+	}
+	x := Structs.CreateQMSG(db, "myTopic", "this is the long message")
+	DButils.SET(db, x.Key, DButils.Serialize(x))
+	fmt.Println("'", string(x.Key), "'")
+	b := DButils.GET(db, x.Key)
+	var qmsg Structs.S_QMSG
+	DButils.Deserialize(b, &qmsg)
+	fmt.Println(qmsg)

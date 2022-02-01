@@ -1,0 +1,15 @@
+QDBSettings:
+  - RootPath: /${HOME}/.goQ/_dbs
+  - WatchDogSec: 5
+  - ActiveToDelayed: 30
+  - DelayedToFailed: 30
+RedConSettings:
+  - Port: 9001
+  - Password: goQ!
+HttpServer:
+  - Port: 8080
+  - Username: goQgo
+  - password: goQ!
+GoQSettings:
+  - SettngsDBPath: /${HOME}/.goQ/_system
+
