@@ -7,4 +7,6 @@
 
  __Under Active Development__
  
-Crimson Queue allows you to have multiple consumers listening on topics and receive a copy of a message that targets its topic providing multiple consumers for a queue message and complex message routing. Utilizes the same methodology as MQTT topic routing but with queue stages and persistence.,
+Crimson Queue allows you to have multiple consumers listening on topics and receive a copy of a message that targets its topic. It provides multiple consumers with a message queue and complex message routing. Utilizes the same methodology as MQTT topic routing but with queue stages and persistence per consumer. This is under active development. It is being developed in Go and utilizes BadgerDB as the internal database layer to provide top notch performance, persistence and durability. It supports Redis RESP protocol, allowing any redis library the ability to connect to it and communicate with it also keeping the performance at, also can be utilized from redis-cli. 
+
+The combination of BadgerDB and RESP protocol allows near 0.5M transactions a second on a single core with minimal ram requirements. It is optimized to be used in the cloud with VPS servers providing SSD storages. 
