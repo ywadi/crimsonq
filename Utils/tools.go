@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
 )
@@ -40,4 +41,21 @@ func Deserialize(value []byte, StructType interface{}) {
 	if err := dec.Decode(StructType); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func PrintANSIlogo() {
+	fmt.Print(`
+	 .d8888b.          d8b                                           .d88888b.  
+	d88P  Y88b         Y8P                                          d88P" "Y88b 
+	888    888                                                      888     888 
+	888        888d888 888 88888b.d88b.  .d8888b   .d88b.  88888b.  888     888 
+	888        888P"   888 888 "888 "88b 88K      d88""88b 888 "88b 888     888 
+	888    888 888     888 888  888  888 "Y8888b. 888  888 888  888 888 Y8b 888 
+	Y88b  d88P 888     888 888  888  888      X88 Y88..88P 888  888 Y88b.Y8b88P 
+	 "Y8888P"  888     888 888  888  888  88888P'  "Y88P"  888  888  "Y888888"  
+										Y8b  
+																				
+	CrimsonQ V1.0 = Demon Running 									
+	`)
+	fmt.Println()
 }

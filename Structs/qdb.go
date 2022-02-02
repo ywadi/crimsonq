@@ -59,6 +59,7 @@ func (qdb *S_QDB) AddTopicFilter(newTopicFilter string) {
 	qdb.QdbTopicFilters = append(qdb.QdbTopicFilters, newTopicFilter)
 }
 
+//TODO
 func (qdb *S_QDB) RemoveTopicFilter() {
 	// for i, s := range qdb.QdbTopicFilters {
 	// 	//TODO: implement slice, is it by ref or var the s?!
@@ -126,18 +127,23 @@ func (qdb *S_QDB) Pull() S_QMSG {
 	Utils.Deserialize(v, &qmsg)
 	return qmsg
 }
-func (qdb *S_QDB) MarkDelayed(db *badger.DB, key string) {
+func (qdb *S_QDB) MarkDelayed(key string) {
 	//Get Message from Pending and add to Delayed
 	qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_DELAYED, "")
 
 }
-func (qdb *S_QDB) MarkCompleted(db *badger.DB, key string) {
+
+func (qdb *S_QDB) RetryFailed(key string) {
+	qdb.MoveMsg(key, Defs.STATUS_FAILED, Defs.STATUS_PENDING, "")
+}
+
+func (qdb *S_QDB) MarkCompleted(key string) {
 	//Get Message from Delayed or Pending and add to Complete
 	//TODO IFs
 	qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_COMPLETED, "")
 	qdb.MoveMsg(key, Defs.STATUS_PENDING, Defs.STATUS_COMPLETED, "")
 }
-func (qdb *S_QDB) MarkFailed(db *badger.DB, key string) {
+func (qdb *S_QDB) MarkFailed(key string) {
 	//Get Message from Delayed or Pending and add to Failed
 	//TODO IFs
 	qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_FAILED, "")
@@ -154,4 +160,31 @@ func (qdb *S_QDB) CreateAndPushQMSG(topic string, message string) {
 	qmsg.StatusHistory = make(map[string]time.Time)
 	qmsg.StatusHistory[Defs.CREATED_AT] = time.Now()
 	qdb.Push(*qmsg)
+}
+
+func (qdb *S_QDB) ClearComplete() {
+	DButils.ClearPrefix(qdb.DB, Defs.STATUS_COMPLETED)
+}
+
+func (qdb *S_QDB) ClearFailed() {
+	DButils.ClearPrefix(qdb.DB, Defs.STATUS_FAILED)
+}
+
+func (qdb *S_QDB) GetAllFailed() []S_QMSG {
+	msgList := []S_QMSG{}
+
+	b := DButils.GetAllPrefix(qdb.DB, Defs.STATUS_FAILED)
+	for _, s := range b {
+		newMSG := S_QMSG{}
+		newMSG.Deserialize(s)
+		msgList = append(msgList, newMSG)
+	}
+	return msgList
+}
+
+func (qdb *S_QDB) RetryAllFailed() {
+	msgs := qdb.GetAllFailed()
+	for _, m := range msgs {
+		qdb.RetryFailed(m.Key)
+	}
 }
