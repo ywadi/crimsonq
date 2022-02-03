@@ -1,4 +1,8 @@
 //Settings to be implemented 
-//RedCon Connection
-
-//Fix pull on empty (breaks)
+    database path for consumers
+    system db path 
+    redis server port 
+    redis tls ? 
+    
+// Once connected send number of messages 
+// Check command for messages 

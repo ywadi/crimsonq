@@ -16,7 +16,7 @@ var crimsonQ *Structs.S_GOQ
 
 func StartRedCon(addr string, cq *Structs.S_GOQ) {
 	initCommands()
-	go cq.Init("TODO replace with settings")
+	go cq.Init()
 	crimsonQ = cq
 	go log.Printf("started server at %s", addr)
 	err := redcon.ListenAndServe(addr,

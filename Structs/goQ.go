@@ -2,7 +2,6 @@ package Structs
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -12,28 +11,24 @@ import (
 	"ywadi/goq/Utils"
 
 	"github.com/dgraph-io/badger/v3"
+	"github.com/spf13/viper"
 )
-
-//Manage the QDBs in _systemdb
-//CreateSystemDB has the QDBs and Settings, all as prefix
 
 type S_GOQ struct {
 	QDBPool  map[string]*S_QDB
-	Settings string
 	SystemDb *badger.DB
 }
 
 var wg sync.WaitGroup
 
-func (goq *S_GOQ) Init(settings string) {
+func (goq *S_GOQ) Init() {
 	wg.Add(1)
 	goq.StartWatchDog()
 	go func() {
 		goq.QDBPool = make(map[string]*S_QDB)
 		Utils.PrintANSIlogo()
-		//Open System Db
-		goq.Settings = "Replace with settings"
-		systemDB, err := DButils.CreateDb("_systemDB", "/home/ywadi/.goQ/_system")
+		//Open System
+		systemDB, err := DButils.CreateDb("_systemDB", viper.GetString("crimson_settings.system_db_path"))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -53,15 +48,14 @@ func (goq *S_GOQ) Init(settings string) {
 
 func (goq *S_GOQ) StartWatchDog() {
 	println("Watchdog Started...")
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(time.Duration(viper.GetInt64("crimson_settings.watchdog_seconds")) * time.Second)
 	done := make(chan bool)
 	go func() {
 		for {
 			select {
 			case <-done:
 				return
-			case t := <-ticker.C:
-				fmt.Println("Tick at", t)
+			case <-ticker.C:
 				for _, s := range goq.QDBPool {
 					s.ExpireQmsgFromStatus()
 				}
@@ -74,7 +68,6 @@ func (goq *S_GOQ) StartWatchDog() {
 func (goq *S_GOQ) CreateQDB(consumerId string, QDBpath string, QdbTopicFilters string) {
 	var qdb S_QDB
 	topicFilters := strings.Split(QdbTopicFilters, ",")
-	//TODO path from settings
 	qdb.Init(consumerId, QDBpath, topicFilters)
 	DButils.SET(goq.SystemDb, Defs.QDB_PREFIX+consumerId, qdb.Serialize())
 	goq.QDBPool[consumerId] = &qdb
@@ -103,19 +96,24 @@ func (goq *S_GOQ) PushConsumer(consumerId string, topic string, message string) 
 }
 
 //Push to topic
-func (goq *S_GOQ) PushTopic(topic string, message string) {
+func (goq *S_GOQ) PushTopic(topic string, message string) []*S_QDB {
+	consumersPushed := []*S_QDB{}
 	consumers := goq.QDBPool
 	for _, s := range consumers {
 		for _, x := range s.QdbTopicFilters {
 			if Utils.MQTTMatch(x, topic) {
 				s.CreateAndPushQMSG(topic, message)
+				consumersPushed = append(consumersPushed, s)
 			}
 		}
 	}
+	return consumersPushed
 }
 
 //Pull from consumer
+//Needs mutex lock to avoid overlapping behavior with subscribe
 func (goq *S_GOQ) Pull(consumerId string) (*S_QMSG, error) {
+
 	consumerQ := goq.QDBPool[consumerId]
 	qmg, err := consumerQ.Pull()
 	if err != nil {

@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"ywadi/goq/Defs"
 
+	"github.com/spf13/viper"
 	"github.com/tidwall/redcon"
 )
 
 // var mu sync.RWMutex
-// var ps redcon.PubSub
+var ps redcon.PubSub
 
 func Ping(con redcon.Conn, args ...[][]byte) error {
 	con.WriteString("Pong! " + string(args[0][0]))
@@ -22,7 +24,7 @@ func Quit(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 func Auth(con redcon.Conn, args ...[][]byte) error {
-	if string(args[0][0]) == "pass" {
+	if string(args[0][0]) == viper.GetString("redcon_settings.password") {
 		cntxt := con.Context().(ConnContext)
 		cntxt.Auth = true
 		con.SetContext(cntxt)
@@ -38,8 +40,14 @@ func Command(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func Subscribe(con redcon.Conn) { //TODO
-	//consumerId := string(args[0][0])
+func Subscribe(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	if crimsonQ.ConsumerExists(consumerId) {
+		ps.Subscribe(con, consumerId)
+	} else {
+		con.WriteError(Defs.ERRincorrectConsumerId)
+	}
+	return nil
 }
 
 func Exists(con redcon.Conn, args ...[][]byte) error {
@@ -56,7 +64,7 @@ func Select(con redcon.Conn, args ...[][]byte) error {
 		con.SetContext(ctx)
 		con.WriteString("Selected [" + consumerId + "]")
 	} else {
-		crimsonQ.CreateQDB(consumerId, "/home/ywadi/_crimson/_dbs", topicFilters)
+		crimsonQ.CreateQDB(consumerId, viper.GetString("crimson_settings.data_rootpath"), topicFilters)
 		con.WriteString("No such consumer id, created and selecting " + consumerId)
 	}
 	return nil
@@ -93,7 +101,11 @@ func Msg_Keys(con redcon.Conn, args ...[][]byte) error {
 func Msg_Push_Topic(con redcon.Conn, args ...[][]byte) error {
 	topic := string(args[0][0])
 	message := string(args[0][1])
-	crimsonQ.PushTopic(topic, message)
+	consumers := crimsonQ.PushTopic(topic, message)
+	//TODO Publish somehow
+	for _, s := range consumers {
+		ps.Publish(s.QdbId, "new_message")
+	}
 	con.WriteString("Ok")
 	return nil
 }
@@ -103,11 +115,18 @@ func Msg_Push_Consumer(con redcon.Conn, args ...[][]byte) error {
 	topic := string(args[0][0])
 	message := string(args[0][1])
 	if crimsonQ.ConsumerExists(consumerId) {
-		crimsonQ.PushConsumer(consumerId, topic, message)
+		crimsonQ.PushConsumer(consumerId, "direct:"+topic, message)
+		all, err := crimsonQ.ListAllKeys(consumerId)
+		if err != nil {
+			err := errors.New(Defs.ERRnoDataReturn)
+			con.WriteError(fmt.Sprint(err))
+			return err
+		}
+		ps.Publish(consumerId, fmt.Sprint(len(all)))
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("001:incorrect_consumer_id")
+		err := errors.New(Defs.ERRincorrectConsumerId)
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -125,7 +144,7 @@ func Msg_Pull(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString(msg.JsonStringify())
 		return nil
 	} else {
-		err := errors.New("001:incorrect_consumer_id")
+		err := errors.New(Defs.ERRincorrectConsumerId)
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -143,7 +162,7 @@ func Msg_Del(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("001:incorrect_consumer_id")
+		err := errors.New(Defs.ERRincorrectConsumerId)
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -161,7 +180,7 @@ func Msg_Fail(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("001:incorrect_consumer_id")
+		err := errors.New(Defs.ERRincorrectConsumerId)
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -179,7 +198,7 @@ func Msg_Complete(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("001:incorrect_consumer_id")
+		err := errors.New(Defs.ERRincorrectConsumerId)
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -191,13 +210,13 @@ func Msg_Retry(con redcon.Conn, args ...[][]byte) error {
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.MsgRetry(consumerId, messageId)
 		if err != nil {
-			err := errors.New("001:incorrect_consumer_id")
+			err := errors.New(Defs.ERRincorrectConsumerId)
 			return err
 		}
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("001:incorrect_consumer_id")
+		err := errors.New(Defs.ERRincorrectConsumerId)
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -210,7 +229,7 @@ func Msg_Retry_All(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("001:incorrect_consumer_id")
+		err := errors.New(Defs.ERRincorrectConsumerId)
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -223,7 +242,7 @@ func Flush_Complete(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("001:incorrect_consumer_id")
+		err := errors.New(Defs.ERRincorrectConsumerId)
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -236,7 +255,7 @@ func Flush_Failed(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("001:incorrect_consumer_id")
+		err := errors.New(Defs.ERRincorrectConsumerId)
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -262,7 +281,7 @@ func initCommands() {
 		"destroy":           {Function: Destroy, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 		"list":              {Function: List, ArgsCmd: []string{}, RequiresConsumerId: false},
 		"msg_keys":          {Function: Msg_Keys, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg_push_Topic":    {Function: Msg_Push_Topic, ArgsCmd: []string{"topicString", "messageString"}, RequiresConsumerId: false},
+		"msg_push_topic":    {Function: Msg_Push_Topic, ArgsCmd: []string{"topicString", "messageString"}, RequiresConsumerId: false},
 		"msg_push_consumer": {Function: Msg_Push_Consumer, ArgsCmd: []string{"consumerId", "messageString"}, RequiresConsumerId: true},
 		"msg_pull":          {Function: Msg_Pull, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 		"msg_del":           {Function: Msg_Del, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},

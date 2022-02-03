@@ -19,3 +19,8 @@ const (
 const (
 	QDB_PREFIX string = "qdbid:"
 )
+
+const (
+	ERRincorrectConsumerId string = "001:incorrect_consumer_id"
+	ERRnoDataReturn        string = "002:no_data_returned"
+)

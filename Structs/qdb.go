@@ -13,6 +13,7 @@ import (
 	"ywadi/goq/Utils"
 
 	"github.com/dgraph-io/badger/v3"
+	"github.com/spf13/viper"
 )
 
 type S_QDB struct {
@@ -94,14 +95,13 @@ func (qdb *S_QDB) MoveMsg(key string, from string, to string, err string) (*S_QM
 		DButils.SET(qdb.DB(), newKey, ser)
 		return &qmsg, nil
 	} else {
-		return nil, errors.New("002:no_data_returned")
+		return nil, errors.New(Defs.ERRnoDataReturn)
 	}
 }
 
 func (qdb *S_QDB) ExpireQmsgFromStatus() {
-	//TODO Settings for duration
-	qdb.MoveBatchOlderThan(Defs.STATUS_ACTIVE, Defs.STATUS_DELAYED, 10*time.Second)
-	qdb.MoveBatchOlderThan(Defs.STATUS_DELAYED, Defs.STATUS_FAILED, 10*time.Second)
+	qdb.MoveBatchOlderThan(Defs.STATUS_ACTIVE, Defs.STATUS_DELAYED, time.Duration(viper.GetInt64("crimson_settings.active_before_delayed"))*time.Second)
+	qdb.MoveBatchOlderThan(Defs.STATUS_DELAYED, Defs.STATUS_FAILED, time.Duration(viper.GetInt64("crimson_settings.delayed_before_failed"))*time.Second)
 }
 
 func (qdb *S_QDB) MoveBatchOlderThan(from string, to string, duration time.Duration) {
