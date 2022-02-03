@@ -107,7 +107,7 @@ func Msg_Push_Consumer(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("incorrect consumer id")
+		err := errors.New("001:incorrect_consumer_id")
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -125,7 +125,7 @@ func Msg_Pull(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString(msg.JsonStringify())
 		return nil
 	} else {
-		err := errors.New("incorrect consumer id")
+		err := errors.New("001:incorrect_consumer_id")
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -143,7 +143,7 @@ func Msg_Del(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("incorrect consumer id")
+		err := errors.New("001:incorrect_consumer_id")
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -161,7 +161,7 @@ func Msg_Fail(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("incorrect consumer id")
+		err := errors.New("001:incorrect_consumer_id")
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -179,7 +179,7 @@ func Msg_Complete(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("incorrect consumer id")
+		err := errors.New("001:incorrect_consumer_id")
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -191,13 +191,13 @@ func Msg_Retry(con redcon.Conn, args ...[][]byte) error {
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.MsgRetry(consumerId, messageId)
 		if err != nil {
-			err := errors.New("incorrect consumer id")
+			err := errors.New("001:incorrect_consumer_id")
 			return err
 		}
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("incorrect consumer id")
+		err := errors.New("001:incorrect_consumer_id")
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -210,7 +210,7 @@ func Msg_Retry_All(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("incorrect consumer id")
+		err := errors.New("001:incorrect_consumer_id")
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -223,7 +223,7 @@ func Flush_Complete(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("incorrect consumer id")
+		err := errors.New("001:incorrect_consumer_id")
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}
@@ -236,7 +236,7 @@ func Flush_Failed(con redcon.Conn, args ...[][]byte) error {
 		con.WriteString("Ok")
 		return nil
 	} else {
-		err := errors.New("incorrect consumer id")
+		err := errors.New("001:incorrect_consumer_id")
 		con.WriteError(fmt.Sprint(err))
 		return err
 	}

@@ -94,7 +94,7 @@ func (qdb *S_QDB) MoveMsg(key string, from string, to string, err string) (*S_QM
 		DButils.SET(qdb.DB(), newKey, ser)
 		return &qmsg, nil
 	} else {
-		return nil, errors.New("no data returned")
+		return nil, errors.New("002:no_data_returned")
 	}
 }
 

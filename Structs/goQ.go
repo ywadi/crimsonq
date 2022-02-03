@@ -176,7 +176,7 @@ func (goq *S_GOQ) ListAllKeys(consumerId string) ([]string, error) {
 	if goq.ConsumerExists(consumerId) {
 		return consumerQ.GetAllKeys(), nil
 	}
-	return nil, errors.New("incorrect consumer id")
+	return nil, errors.New("001:incorrect_consumer_id")
 }
 
 func (goq *S_GOQ) Del(consumerId string, messageId string) error {
