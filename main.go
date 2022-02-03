@@ -1,7 +1,11 @@
 package main
 
-import "ywadi/goq/RedconQ"
+import (
+	"ywadi/goq/RedconQ"
+	"ywadi/goq/Structs"
+)
 
 func main() {
-	RedconQ.StartRedCon(":9001")
+	crimsonQ := Structs.S_GOQ{}
+	RedconQ.StartRedCon(":9001", &crimsonQ)
 }

@@ -45,6 +45,22 @@ func (goq *S_GOQ) Init(settings string) {
 	wg.Wait()
 }
 
+func (goq *S_GOQ) ListConsumers() []string {
+	var cList []string
+	for k := range goq.QDBPool {
+		cList = append(cList, k)
+	}
+	return cList
+}
+
+func (goq *S_GOQ) ConsumerExists(consumerId string) bool {
+	if _, ok := goq.QDBPool[consumerId]; ok {
+		return true
+	} else {
+		return false
+	}
+}
+
 //Push to consumer
 func (goq *S_GOQ) PushConsumer(consumerId string, topic string, message string) {
 	consumerQ := goq.QDBPool[consumerId]
