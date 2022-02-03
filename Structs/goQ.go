@@ -1,6 +1,7 @@
 package Structs
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -114,29 +115,43 @@ func (goq *S_GOQ) PushTopic(topic string, message string) {
 }
 
 //Pull from consumer
-func (goq *S_GOQ) Pull(consumerId string) S_QMSG {
+func (goq *S_GOQ) Pull(consumerId string) (*S_QMSG, error) {
 	consumerQ := goq.QDBPool[consumerId]
-	qmg := consumerQ.Pull()
-	return qmg
+	qmg, err := consumerQ.Pull()
+	if err != nil {
+		return nil, err
+	}
+	return qmg, nil
 }
 
 //MarkMSGIDFailed
-func (goq *S_GOQ) MsgFail(consumerId string, msgKey string) {
+func (goq *S_GOQ) MsgFail(consumerId string, msgKey string) error {
 	consumerQ := goq.QDBPool[consumerId]
-	consumerQ.MarkFailed(msgKey)
-
+	err := consumerQ.MarkFailed(msgKey)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 //MarkMSGIDComplete
-func (goq *S_GOQ) MsgComplete(consumerId string, msgKey string) {
+func (goq *S_GOQ) MsgComplete(consumerId string, msgKey string) error {
 	consumerQ := goq.QDBPool[consumerId]
-	consumerQ.MarkCompleted(msgKey)
+	err := consumerQ.MarkCompleted(msgKey)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 //RetryMSGIDFailed
-func (goq *S_GOQ) MsgRetry(consumerId string, msgKey string) {
+func (goq *S_GOQ) MsgRetry(consumerId string, msgKey string) error {
 	consumerQ := goq.QDBPool[consumerId]
-	consumerQ.RetryFailed(msgKey)
+	err := consumerQ.RetryFailed(msgKey)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 //RetryAllFailed
@@ -156,12 +171,19 @@ func (goq *S_GOQ) ClearFailed(consumerId string) {
 	consumerQ.ClearFailed()
 }
 
-func (goq *S_GOQ) ListAllKeys(consumerId string) []string {
+func (goq *S_GOQ) ListAllKeys(consumerId string) ([]string, error) {
 	consumerQ := goq.QDBPool[consumerId]
-	return consumerQ.GetAllKeys()
+	if goq.ConsumerExists(consumerId) {
+		return consumerQ.GetAllKeys(), nil
+	}
+	return nil, errors.New("incorrect consumer id")
 }
 
-func (goq *S_GOQ) Del(consumerId string, messageId string) {
+func (goq *S_GOQ) Del(consumerId string, messageId string) error {
 	consumerQ := goq.QDBPool[consumerId]
-	consumerQ.Del(messageId)
+	err := consumerQ.Del(messageId)
+	if err != nil {
+		return err
+	}
+	return err
 }

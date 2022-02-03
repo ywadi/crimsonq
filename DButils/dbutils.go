@@ -36,41 +36,43 @@ func SET(db *badger.DB, key string, value []byte) error {
 	keyString := []byte(key)
 	err := db.Update(func(txn *badger.Txn) error {
 		err := txn.Set(keyString, value)
-		handle(err)
 		return err
 	})
-	handle(err)
 	return err
 }
 
-func GET(db *badger.DB, key string) []byte {
+func GET(db *badger.DB, key string) ([]byte, error) {
 	var result []byte
 	err := db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(key))
-		handle(err)
+		if err != nil {
+			return nil
+		}
 		result, err = item.ValueCopy(nil)
-		handle(err)
+		if err != nil {
+			return nil
+		}
 		return nil
 	})
-	handle(err)
-	return result
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func DEL(db *badger.DB, key string) error {
 	err := db.Update(func(txn *badger.Txn) error {
 		err := txn.Delete([]byte(key))
-		handle(err)
 		return err
 	})
-	handle(err)
 	return err
 }
 
 //Move to Pull ?
-func DEQ(db *badger.DB) (key []byte, val []byte) {
+func DEQ(db *badger.DB) (key []byte, val []byte, xe error) {
 	var result []byte
 	var resultKey []byte
-	db.View(func(txn *badger.Txn) error {
+	err := db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 		prefix := []byte(Defs.STATUS_PENDING)
@@ -83,7 +85,7 @@ func DEQ(db *badger.DB) (key []byte, val []byte) {
 					return err
 				}
 				result = valCopy
-				return nil
+				return err
 			})
 			if err != nil {
 				return err
@@ -92,7 +94,10 @@ func DEQ(db *badger.DB) (key []byte, val []byte) {
 		}
 		return nil
 	})
-	return resultKey, result
+	if err != nil {
+		return nil, nil, err
+	}
+	return resultKey, result, nil
 }
 
 func ClearDb(db *badger.DB) {
@@ -126,10 +131,4 @@ func GetAllPrefix(db *badger.DB, filterPrefix string) [][]byte {
 		return nil
 	})
 	return results
-}
-
-func handle(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
 }

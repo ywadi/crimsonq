@@ -1,6 +1,7 @@
 package RedconQ
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,36 +12,42 @@ import (
 // var mu sync.RWMutex
 // var ps redcon.PubSub
 
-func Ping(con redcon.Conn, args ...[][]byte) {
+func Ping(con redcon.Conn, args ...[][]byte) error {
 	con.WriteString("Pong! " + string(args[0][0]))
+	return nil
 }
-func Quit(con redcon.Conn, args ...[][]byte) {
+func Quit(con redcon.Conn, args ...[][]byte) error {
 	con.WriteString("Bye!")
 	con.Close()
+	return nil
 }
-func Auth(con redcon.Conn, args ...[][]byte) {
+func Auth(con redcon.Conn, args ...[][]byte) error {
 	if string(args[0][0]) == "pass" {
 		cntxt := con.Context().(ConnContext)
 		cntxt.Auth = true
 		con.SetContext(cntxt)
 		con.WriteString("Yo!")
 	}
+	return nil
 }
-func Command(con redcon.Conn, args ...[][]byte) {
+func Command(con redcon.Conn, args ...[][]byte) error {
 	con.WriteArray(len(Commands))
 	for k, v := range Commands {
 		con.WriteBulk([]byte(k + " [" + strings.Join(v.ArgsCmd, "] [") + "]"))
 	}
+	return nil
 }
 
 func Subscribe(con redcon.Conn) { //TODO
 	//consumerId := string(args[0][0])
 }
 
-func Exists(con redcon.Conn, args ...[][]byte) {
+func Exists(con redcon.Conn, args ...[][]byte) error {
 	con.WriteString(strconv.FormatBool(crimsonQ.ConsumerExists(string(args[0][0]))))
+	return nil
 }
-func Select(con redcon.Conn, args ...[][]byte) {
+
+func Select(con redcon.Conn, args ...[][]byte) error {
 	ctx := con.Context().(ConnContext)
 	consumerId := string(args[0][0])
 	topicFilters := string(args[0][1])
@@ -52,96 +59,187 @@ func Select(con redcon.Conn, args ...[][]byte) {
 		crimsonQ.CreateQDB(consumerId, "/home/ywadi/_crimson/_dbs", topicFilters)
 		con.WriteString("No such consumer id, created and selecting " + consumerId)
 	}
-
+	return nil
 }
-func Destroy(con redcon.Conn, args ...[][]byte) {
+func Destroy(con redcon.Conn, args ...[][]byte) error {
 	//TODO
 	//consumerId := string(args[0][0])
+	return nil
 }
 
-func List(con redcon.Conn, args ...[][]byte) {
+func List(con redcon.Conn, args ...[][]byte) error {
 	clist := crimsonQ.ListConsumers()
 	con.WriteArray(len(clist))
 	for _, s := range clist {
 		con.WriteBulkString(s)
 	}
+	return nil
 }
 
-func Msg_Keys(con redcon.Conn, args ...[][]byte) {
+func Msg_Keys(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
-	list := crimsonQ.ListAllKeys(consumerId)
+	list, err := crimsonQ.ListAllKeys(consumerId)
+	if err != nil {
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
 	con.WriteArray(len(list))
 	for _, s := range list {
 		con.WriteBulkString(s)
 	}
-
+	return nil
 }
 
-func Msg_Push_Topic(con redcon.Conn, args ...[][]byte) {
+func Msg_Push_Topic(con redcon.Conn, args ...[][]byte) error {
 	topic := string(args[0][0])
 	message := string(args[0][1])
 	crimsonQ.PushTopic(topic, message)
 	con.WriteString("Ok")
+	return nil
 }
 
-func Msg_Push_Consumer(con redcon.Conn, args ...[][]byte) {
+func Msg_Push_Consumer(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	topic := string(args[0][0])
 	message := string(args[0][1])
-	crimsonQ.PushConsumer(consumerId, topic, message)
-	con.WriteString("Ok")
+	if crimsonQ.ConsumerExists(consumerId) {
+		crimsonQ.PushConsumer(consumerId, topic, message)
+		con.WriteString("Ok")
+		return nil
+	} else {
+		err := errors.New("incorrect consumer id")
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
+
 }
 
-func Msg_Pull(con redcon.Conn, args ...[][]byte) {
+func Msg_Pull(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
-	msg := crimsonQ.Pull(consumerId)
-	con.WriteString(msg.JsonStringify())
+	if crimsonQ.ConsumerExists(consumerId) {
+		msg, err := crimsonQ.Pull(consumerId)
+		if err != nil {
+			con.WriteError(fmt.Sprint(err))
+			return err
+		}
+		con.WriteString(msg.JsonStringify())
+		return nil
+	} else {
+		err := errors.New("incorrect consumer id")
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
 }
 
-func Msg_Del(con redcon.Conn, args ...[][]byte) {
-	consumerId := string(args[0][0])
-	messageId := string(args[0][1])
-	crimsonQ.Del(consumerId, messageId)
-	con.WriteString("Ok")
-}
-
-func Msg_Fail(con redcon.Conn, args ...[][]byte) {
-	consumerId := string(args[0][0])
-	messageId := string(args[0][1])
-	crimsonQ.MsgFail(consumerId, messageId)
-	con.WriteString("Ok")
-}
-
-func Msg_Complete(con redcon.Conn, args ...[][]byte) {
-	consumerId := string(args[0][0])
-	messageId := string(args[0][1])
-	crimsonQ.MsgComplete(consumerId, messageId)
-	con.WriteString("Ok")
-}
-
-func Msg_Retry(con redcon.Conn, args ...[][]byte) {
+func Msg_Del(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	messageId := string(args[0][1])
-	crimsonQ.MsgRetry(consumerId, messageId)
-	con.WriteString("Ok")
+	if crimsonQ.ConsumerExists(consumerId) {
+		err := crimsonQ.Del(consumerId, messageId)
+		if err != nil {
+			con.WriteError(fmt.Sprint(err))
+			return err
+		}
+		con.WriteString("Ok")
+		return nil
+	} else {
+		err := errors.New("incorrect consumer id")
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
 }
 
-func Msg_Retry_All(con redcon.Conn, args ...[][]byte) {
+func Msg_Fail(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
-	crimsonQ.ReqAllFailed(consumerId)
-	con.WriteString("Ok")
+	messageId := string(args[0][1])
+	if crimsonQ.ConsumerExists(consumerId) {
+		err := crimsonQ.MsgFail(consumerId, messageId)
+		if err != nil {
+			con.WriteError("incorrect message id")
+			return err
+		}
+		con.WriteString("Ok")
+		return nil
+	} else {
+		err := errors.New("incorrect consumer id")
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
 }
 
-func Flush_Complete(con redcon.Conn, args ...[][]byte) {
+func Msg_Complete(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
-	crimsonQ.ClearComplete(consumerId)
-	con.WriteString("Ok")
+	messageId := string(args[0][1])
+	if crimsonQ.ConsumerExists(consumerId) {
+		err := crimsonQ.MsgComplete(consumerId, messageId)
+		if err != nil {
+			con.WriteError(fmt.Sprint(err))
+			return err
+		}
+		con.WriteString("Ok")
+		return nil
+	} else {
+		err := errors.New("incorrect consumer id")
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
 }
 
-func Flush_Failed(con redcon.Conn, args ...[][]byte) {
+func Msg_Retry(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
-	crimsonQ.ClearFailed(consumerId)
-	con.WriteString("Ok")
+	messageId := string(args[0][1])
+	if crimsonQ.ConsumerExists(consumerId) {
+		err := crimsonQ.MsgRetry(consumerId, messageId)
+		if err != nil {
+			err := errors.New("incorrect consumer id")
+			return err
+		}
+		con.WriteString("Ok")
+		return nil
+	} else {
+		err := errors.New("incorrect consumer id")
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
+}
+
+func Msg_Retry_All(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	if crimsonQ.ConsumerExists(consumerId) {
+		crimsonQ.ReqAllFailed(consumerId)
+		con.WriteString("Ok")
+		return nil
+	} else {
+		err := errors.New("incorrect consumer id")
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
+}
+
+func Flush_Complete(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	if crimsonQ.ConsumerExists(consumerId) {
+		crimsonQ.ClearComplete(consumerId)
+		con.WriteString("Ok")
+		return nil
+	} else {
+		err := errors.New("incorrect consumer id")
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
+}
+
+func Flush_Failed(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	if crimsonQ.ConsumerExists(consumerId) {
+		crimsonQ.ClearFailed(consumerId)
+		con.WriteString("Ok")
+		return nil
+	} else {
+		err := errors.New("incorrect consumer id")
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
 }
 
 var Commands map[string]RedConCmds
@@ -188,11 +286,13 @@ func execCommand(conn redcon.Conn, cmd redcon.Command) {
 				}
 			}
 			if len(val.ArgsCmd) == len(cmd.Args)-1 {
-				val.Function.(func(con redcon.Conn, values ...[][]byte))(conn, cmd.Args[1:])
+				val.Function.(func(con redcon.Conn, values ...[][]byte) error)(conn, cmd.Args[1:])
 			} else {
 				conn.WriteError("Incorrect number of arguments for " + cCmd + ", expected " + string(len(cmd.Args)-1) + "(" + strings.Join(val.ArgsCmd, ",") + ") but got " + fmt.Sprint(len(cmd.Args)) + " Args")
 			}
+			return
 		}
+		conn.WriteError("incorrect command")
 	} else {
 		conn.WriteError("Auth Error: You Shall not pass!")
 		conn.Close()
