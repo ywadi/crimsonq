@@ -1,8 +1,11 @@
 package Structs
 
 import (
+	"fmt"
 	"log"
+	"strings"
 	"sync"
+	"time"
 	"ywadi/goq/DButils"
 	"ywadi/goq/Defs"
 	"ywadi/goq/Utils"
@@ -19,13 +22,15 @@ type S_GOQ struct {
 	SystemDb *badger.DB
 }
 
+var wg sync.WaitGroup
+
 func (goq *S_GOQ) Init(settings string) {
-	var wg sync.WaitGroup
 	wg.Add(1)
+	goq.StartWatchDog()
 	go func() {
+		goq.QDBPool = make(map[string]*S_QDB)
 		Utils.PrintANSIlogo()
 		//Open System Db
-		goq.QDBPool = make(map[string]*S_QDB)
 		goq.Settings = "Replace with settings"
 		systemDB, err := DButils.CreateDb("_systemDB", "/home/ywadi/.goQ/_system")
 		if err != nil {
@@ -43,6 +48,35 @@ func (goq *S_GOQ) Init(settings string) {
 		//wg.Done() //TODO: Command off channel
 	}()
 	wg.Wait()
+}
+
+func (goq *S_GOQ) StartWatchDog() {
+	println("Watchdog Started...")
+	ticker := time.NewTicker(1 * time.Second)
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case t := <-ticker.C:
+				fmt.Println("Tick at", t)
+				for _, s := range goq.QDBPool {
+					s.ExpireQmsgFromStatus()
+				}
+
+			}
+		}
+	}()
+}
+
+func (goq *S_GOQ) CreateQDB(consumerId string, QDBpath string, QdbTopicFilters string) {
+	var qdb S_QDB
+	topicFilters := strings.Split(QdbTopicFilters, ",")
+	//TODO path from settings
+	qdb.Init(consumerId, QDBpath, topicFilters)
+	DButils.SET(goq.SystemDb, Defs.QDB_PREFIX+consumerId, qdb.Serialize())
+	goq.QDBPool[consumerId] = &qdb
 }
 
 func (goq *S_GOQ) ListConsumers() []string {
@@ -68,8 +102,15 @@ func (goq *S_GOQ) PushConsumer(consumerId string, topic string, message string) 
 }
 
 //Push to topic
-func (goq *S_GOQ) PushToipc(topic string, message string) {
-
+func (goq *S_GOQ) PushTopic(topic string, message string) {
+	consumers := goq.QDBPool
+	for _, s := range consumers {
+		for _, x := range s.QdbTopicFilters {
+			if Utils.MQTTMatch(x, topic) {
+				s.CreateAndPushQMSG(topic, message)
+			}
+		}
+	}
 }
 
 //Pull from consumer
@@ -113,4 +154,14 @@ func (goq *S_GOQ) ClearComplete(consumerId string) {
 func (goq *S_GOQ) ClearFailed(consumerId string) {
 	consumerQ := goq.QDBPool[consumerId]
 	consumerQ.ClearFailed()
+}
+
+func (goq *S_GOQ) ListAllKeys(consumerId string) []string {
+	consumerQ := goq.QDBPool[consumerId]
+	return consumerQ.GetAllKeys()
+}
+
+func (goq *S_GOQ) Del(consumerId string, messageId string) {
+	consumerQ := goq.QDBPool[consumerId]
+	consumerQ.Del(messageId)
 }

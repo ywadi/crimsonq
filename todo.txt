@@ -1,2 +1,4 @@
 //Settings to be implemented 
 //RedCon Connection
+
+//Fix pull on empty (breaks)

@@ -17,18 +17,39 @@ type S_QDB struct {
 	QdbId           string
 	QdbPath         string
 	QdbTopicFilters []string
-	DB              *badger.DB
 }
+
+var DBpool map[string]*badger.DB
 
 func (qdb *S_QDB) Init(QdbId string, QdbPath string, QdbTopicFilters []string) {
 	qdb.QdbId = QdbId
 	qdb.QdbPath = QdbPath
 	qdb.QdbTopicFilters = QdbTopicFilters
+	DBpool = make(map[string]*badger.DB)
 	qdb.CreateDB()
 }
 
+func (qdb *S_QDB) Destroy() {
+	DBpool[qdb.QdbId].Close()
+	delete(DBpool, qdb.QdbId)
+}
+
 func (qdb *S_QDB) Deserialize(data []byte) {
+	DBpool = make(map[string]*badger.DB)
 	Utils.Deserialize(data, qdb)
+	qdb.CreateDB()
+}
+
+func (qdb *S_QDB) Serialize() []byte {
+	return Utils.Serialize(qdb)
+}
+
+func (qdb *S_QDB) DB() *badger.DB {
+	return DBpool[qdb.QdbId]
+}
+
+func (qdb *S_QDB) SetDB(db *badger.DB) {
+	DBpool[qdb.QdbId] = db
 }
 
 func (qdb *S_QDB) CreateDB() {
@@ -36,23 +57,7 @@ func (qdb *S_QDB) CreateDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	qdb.DB = db //TODO: Figure out why flagged
-}
-
-func (qdb *S_QDB) StartWatchDog() {
-	ticker := time.NewTicker(1 * time.Second)
-	done := make(chan bool)
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			case t := <-ticker.C:
-				fmt.Println("Tick at", t)
-				qdb.ExpireQmsgFromStatus()
-			}
-		}
-	}()
+	qdb.SetDB(db) //TODO: Figure out why flagged
 }
 
 func (qdb *S_QDB) AddTopicFilter(newTopicFilter string) {
@@ -66,8 +71,8 @@ func (qdb *S_QDB) RemoveTopicFilter() {
 	// }
 }
 
-func (qdb *S_QDB) MoveMsg(key string, from string, to string, err string) {
-	value := DButils.GET(qdb.DB, key)
+func (qdb *S_QDB) MoveMsg(key string, from string, to string, err string) *S_QMSG {
+	value := DButils.GET(qdb.DB(), key)
 	var qmsg S_QMSG
 	qmsg.Deserialize(value)
 	qmsg.StatusHistory[to+"_at"] = time.Now()
@@ -77,17 +82,20 @@ func (qdb *S_QDB) MoveMsg(key string, from string, to string, err string) {
 		qmsg.Error = err
 	}
 	newKey := strings.Replace(key, from, to, 1)
-	DButils.DEL(qdb.DB, key)
-	DButils.SET(qdb.DB, newKey, Utils.Serialize(qmsg))
+	DButils.DEL(qdb.DB(), key)
+	ser := Utils.Serialize(qmsg)
+	DButils.SET(qdb.DB(), newKey, ser)
+	return &qmsg
 }
 
 func (qdb *S_QDB) ExpireQmsgFromStatus() {
-	qdb.MoveBatchOlderThan(Defs.STATUS_ACTIVE, Defs.STATUS_DELAYED, 1000)
-	qdb.MoveBatchOlderThan(Defs.STATUS_DELAYED, Defs.STATUS_FAILED, 1000)
+	//TODO Settings for duration
+	qdb.MoveBatchOlderThan(Defs.STATUS_ACTIVE, Defs.STATUS_DELAYED, 10*time.Second)
+	qdb.MoveBatchOlderThan(Defs.STATUS_DELAYED, Defs.STATUS_FAILED, 10*time.Second)
 }
 
 func (qdb *S_QDB) MoveBatchOlderThan(from string, to string, duration time.Duration) {
-	qdb.DB.View(func(txn *badger.Txn) error {
+	qdb.DB().View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 		prefix := []byte(from)
@@ -116,16 +124,14 @@ func (qdb *S_QDB) MoveBatchOlderThan(from string, to string, duration time.Durat
 
 func (qdb *S_QDB) Push(qmsg S_QMSG) {
 	//Push message to pending
-	DButils.SET(qdb.DB, qmsg.Key, qmsg.Serialize())
+	DButils.SET(qdb.DB(), qmsg.Key, qmsg.Serialize())
 }
 func (qdb *S_QDB) Pull() S_QMSG {
 	//Get message from Pending and add to Active
 	//Return message and then turn to JSON
-	k, v := DButils.DEQ(qdb.DB)
-	qdb.MoveMsg(string(k), Defs.STATUS_PENDING, Defs.STATUS_ACTIVE, "")
-	var qmsg S_QMSG
-	Utils.Deserialize(v, &qmsg)
-	return qmsg
+	k, _ := DButils.DEQ(qdb.DB())
+	msgRes := qdb.MoveMsg(string(k), Defs.STATUS_PENDING, Defs.STATUS_ACTIVE, "")
+	return *msgRes
 }
 func (qdb *S_QDB) MarkDelayed(key string) {
 	//Get Message from Pending and add to Delayed
@@ -139,7 +145,8 @@ func (qdb *S_QDB) RetryFailed(key string) {
 
 func (qdb *S_QDB) MarkCompleted(key string) {
 	//Get Message from Delayed or Pending and add to Complete
-	//TODO IFs
+	//TODO IF key is there or not, needs to be managed
+	println("KEY>>>>" + key)
 	qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_COMPLETED, "")
 	qdb.MoveMsg(key, Defs.STATUS_PENDING, Defs.STATUS_COMPLETED, "")
 }
@@ -152,28 +159,29 @@ func (qdb *S_QDB) MarkFailed(key string) {
 
 func (qdb *S_QDB) CreateAndPushQMSG(topic string, message string) {
 	qmsg := new(S_QMSG)
-	qmsg.RawKey = DButils.GetNextKey(qdb.DB)
+	qmsg.RawKey = DButils.GetNextKey(qdb.DB())
 	qmsg.Key = (Defs.STATUS_PENDING + ":" + qmsg.RawKey)
 	qmsg.Value = message
 	qmsg.Status = Defs.STATUS_PENDING
 	qmsg.Topic = topic
 	qmsg.StatusHistory = make(map[string]time.Time)
 	qmsg.StatusHistory[Defs.CREATED_AT] = time.Now()
+	println(qmsg.Key)
 	qdb.Push(*qmsg)
 }
 
 func (qdb *S_QDB) ClearComplete() {
-	DButils.ClearPrefix(qdb.DB, Defs.STATUS_COMPLETED)
+	DButils.ClearPrefix(qdb.DB(), Defs.STATUS_COMPLETED)
 }
 
 func (qdb *S_QDB) ClearFailed() {
-	DButils.ClearPrefix(qdb.DB, Defs.STATUS_FAILED)
+	DButils.ClearPrefix(qdb.DB(), Defs.STATUS_FAILED)
 }
 
 func (qdb *S_QDB) GetAllFailed() []S_QMSG {
 	msgList := []S_QMSG{}
 
-	b := DButils.GetAllPrefix(qdb.DB, Defs.STATUS_FAILED)
+	b := DButils.GetAllPrefix(qdb.DB(), Defs.STATUS_FAILED)
 	for _, s := range b {
 		newMSG := S_QMSG{}
 		newMSG.Deserialize(s)
@@ -182,9 +190,53 @@ func (qdb *S_QDB) GetAllFailed() []S_QMSG {
 	return msgList
 }
 
+func (qdb *S_QDB) GetAllKeys() []string {
+	msgKeyList := []string{}
+	db := qdb.DB()
+	b := DButils.GetAllPrefix(db, Defs.STATUS_ACTIVE)
+	for _, s := range b {
+		newMSG := S_QMSG{}
+		newMSG.Deserialize(s)
+		msgKeyList = append(msgKeyList, newMSG.Key)
+	}
+
+	b = DButils.GetAllPrefix(db, Defs.STATUS_COMPLETED)
+	for _, s := range b {
+		newMSG := S_QMSG{}
+		newMSG.Deserialize(s)
+		msgKeyList = append(msgKeyList, newMSG.Key)
+	}
+
+	b = DButils.GetAllPrefix(db, Defs.STATUS_DELAYED)
+	for _, s := range b {
+		newMSG := S_QMSG{}
+		newMSG.Deserialize(s)
+		msgKeyList = append(msgKeyList, newMSG.Key)
+	}
+
+	b = DButils.GetAllPrefix(db, Defs.STATUS_FAILED)
+	for _, s := range b {
+		newMSG := S_QMSG{}
+		newMSG.Deserialize(s)
+		msgKeyList = append(msgKeyList, newMSG.Key)
+	}
+
+	b = DButils.GetAllPrefix(db, Defs.STATUS_PENDING)
+	for _, s := range b {
+		newMSG := S_QMSG{}
+		newMSG.Deserialize(s)
+		msgKeyList = append(msgKeyList, newMSG.Key)
+	}
+	return msgKeyList
+}
+
 func (qdb *S_QDB) RetryAllFailed() {
 	msgs := qdb.GetAllFailed()
 	for _, m := range msgs {
 		qdb.RetryFailed(m.Key)
 	}
+}
+
+func (qdb *S_QDB) Del(messageId string) {
+	DButils.DEL(qdb.DB(), messageId)
 }

@@ -2,6 +2,7 @@ package DButils
 
 import (
 	"log"
+	"ywadi/goq/Defs"
 	"ywadi/goq/Utils"
 
 	badger "github.com/dgraph-io/badger/v3"
@@ -72,7 +73,7 @@ func DEQ(db *badger.DB) (key []byte, val []byte) {
 	db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
-		prefix := []byte("pending")
+		prefix := []byte(Defs.STATUS_PENDING)
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 			resultKey = item.Key()
