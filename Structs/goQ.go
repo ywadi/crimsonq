@@ -123,9 +123,9 @@ func (goq *S_GOQ) Pull(consumerId string) (*S_QMSG, error) {
 }
 
 //MarkMSGIDFailed
-func (goq *S_GOQ) MsgFail(consumerId string, msgKey string) error {
+func (goq *S_GOQ) MsgFail(consumerId string, msgKey string, errMsg string) error {
 	consumerQ := goq.QDBPool[consumerId]
-	err := consumerQ.MarkFailed(msgKey)
+	err := consumerQ.MarkFailed(msgKey, errMsg)
 	if err != nil {
 		return err
 	}

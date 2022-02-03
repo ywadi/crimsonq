@@ -102,7 +102,6 @@ func Msg_Push_Topic(con redcon.Conn, args ...[][]byte) error {
 	topic := string(args[0][0])
 	message := string(args[0][1])
 	consumers := crimsonQ.PushTopic(topic, message)
-	//TODO Publish somehow
 	for _, s := range consumers {
 		ps.Publish(s.QdbId, "new_message")
 	}
@@ -171,8 +170,9 @@ func Msg_Del(con redcon.Conn, args ...[][]byte) error {
 func Msg_Fail(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	messageId := string(args[0][1])
+	errMsg := string(args[0][1])
 	if crimsonQ.ConsumerExists(consumerId) {
-		err := crimsonQ.MsgFail(consumerId, messageId)
+		err := crimsonQ.MsgFail(consumerId, messageId, errMsg)
 		if err != nil {
 			con.WriteError("incorrect message id")
 			return err
@@ -285,7 +285,7 @@ func initCommands() {
 		"msg_push_consumer": {Function: Msg_Push_Consumer, ArgsCmd: []string{"consumerId", "messageString"}, RequiresConsumerId: true},
 		"msg_pull":          {Function: Msg_Pull, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 		"msg_del":           {Function: Msg_Del, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
-		"msg_fail":          {Function: Msg_Fail, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
+		"msg_fail":          {Function: Msg_Fail, ArgsCmd: []string{"consumerId", "messageId", "errMsg"}, RequiresConsumerId: true},
 		"msg_complete":      {Function: Msg_Complete, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
 		"msg_retry":         {Function: Msg_Retry, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
 		"msg_retry_all":     {Function: Msg_Retry_All, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},

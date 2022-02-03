@@ -6,3 +6,5 @@
     
 // Once connected send number of messages 
 // Check command for messages 
+
+/msg_fail working, but says incorrect msg id, needs to be checked on why 

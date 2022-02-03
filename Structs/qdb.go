@@ -166,7 +166,6 @@ func (qdb *S_QDB) RetryFailed(key string) error {
 
 func (qdb *S_QDB) MarkCompleted(key string) error {
 	//Get Message from Delayed or Pending and add to Complete
-	//TODO IF key is there or not, needs to be managed
 	_, err := qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_COMPLETED, "")
 	if err != nil {
 		return err
@@ -177,17 +176,18 @@ func (qdb *S_QDB) MarkCompleted(key string) error {
 	}
 	return nil
 }
-func (qdb *S_QDB) MarkFailed(key string) error {
+func (qdb *S_QDB) MarkFailed(key string, errMsg string) error {
 	//Get Message from Delayed or Pending and add to Failed
 	//TODO IFs
-	_, err := qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_FAILED, "")
+	qmsg, err := qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_FAILED, "")
 	if err != nil {
 		return err
 	}
-	_, err = qdb.MoveMsg(key, Defs.STATUS_PENDING, Defs.STATUS_FAILED, "")
+	qmsg, err = qdb.MoveMsg(key, Defs.STATUS_PENDING, Defs.STATUS_FAILED, "")
 	if err != nil {
 		return err
 	}
+	qmsg.Error = errMsg
 	return nil
 }
 
@@ -200,7 +200,6 @@ func (qdb *S_QDB) CreateAndPushQMSG(topic string, message string) {
 	qmsg.Topic = topic
 	qmsg.StatusHistory = make(map[string]time.Time)
 	qmsg.StatusHistory[Defs.CREATED_AT] = time.Now()
-	println(qmsg.Key)
 	qdb.Push(*qmsg)
 }
 
