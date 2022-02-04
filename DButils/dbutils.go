@@ -6,10 +6,11 @@ import (
 	"ywadi/goq/Utils"
 
 	badger "github.com/dgraph-io/badger/v3"
+	"github.com/spf13/viper"
 )
 
 func CreateDb(dbname string, dbpath string) (database *badger.DB, err error) {
-	db, err := badger.Open(badger.DefaultOptions(dbpath + "/" + dbname))
+	db, err := badger.Open(badger.DefaultOptions(dbpath + "/" + dbname).WithMetricsEnabled(false).WithSyncWrites(viper.GetBool("crimson_settings.db_full_persist")).WithDetectConflicts(viper.GetBool("crimson_settings.db_detect_conflicts")))
 	if err != nil {
 		log.Fatal(err)
 		return nil, err

@@ -111,7 +111,6 @@ func (goq *S_GOQ) PushTopic(topic string, message string) []*S_QDB {
 }
 
 //Pull from consumer
-//Needs mutex lock to avoid overlapping behavior with subscribe
 func (goq *S_GOQ) Pull(consumerId string) (*S_QMSG, error) {
 
 	consumerQ := goq.QDBPool[consumerId]

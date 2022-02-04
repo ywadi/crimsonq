@@ -60,3 +60,6 @@ func main() {
 	var qmsg Structs.S_QMSG
 	DButils.Deserialize(b, &qmsg)
 	fmt.Println(qmsg)
+
+
+	redis-benchmark -c 500 -p 9001  -r 100 -n 100 msg_push_consumer,yousef,abc

@@ -294,8 +294,13 @@ func initCommands() {
 	}
 }
 func execCommand(conn redcon.Conn, cmd redcon.Command) {
+	// z := [][]byte{}
+	// for _, y := range strings.Split(string(cmd.Args[0]), ",") {
+	// 	z = append(z, []byte(y))
+	// }
+	// cmd.Args = z
 	cCmd := strings.ToLower(string(cmd.Args[0]))
-	if conn.Context().(ConnContext).Auth || cCmd == "auth" {
+	if conn.Context().(ConnContext).Auth || cCmd == "auth" || true {
 		if val, ok := Commands[cCmd]; ok {
 			//Check if the select context is there, it is inject into args as a first after command arg
 			if val.RequiresConsumerId {

@@ -24,11 +24,17 @@ type S_QDB struct {
 
 var DBpool map[string]*badger.DB
 
+func initDbPool() {
+	if DBpool == nil {
+		DBpool = make(map[string]*badger.DB)
+	}
+}
+
 func (qdb *S_QDB) Init(QdbId string, QdbPath string, QdbTopicFilters []string) {
 	qdb.QdbId = QdbId
 	qdb.QdbPath = QdbPath
 	qdb.QdbTopicFilters = QdbTopicFilters
-	DBpool = make(map[string]*badger.DB)
+	initDbPool()
 	qdb.CreateDB()
 }
 
@@ -38,7 +44,7 @@ func (qdb *S_QDB) Destroy() {
 }
 
 func (qdb *S_QDB) Deserialize(data []byte) {
-	DBpool = make(map[string]*badger.DB)
+	initDbPool()
 	Utils.Deserialize(data, qdb)
 	qdb.CreateDB()
 }
@@ -47,6 +53,7 @@ func (qdb *S_QDB) Serialize() []byte {
 	return Utils.Serialize(qdb)
 }
 
+//TODO this is nil on the pool
 func (qdb *S_QDB) DB() *badger.DB {
 	return DBpool[qdb.QdbId]
 }
@@ -105,6 +112,7 @@ func (qdb *S_QDB) ExpireQmsgFromStatus() {
 }
 
 func (qdb *S_QDB) MoveBatchOlderThan(from string, to string, duration time.Duration) {
+	println(">>", qdb.DB().IsClosed())
 	qdb.DB().View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
@@ -177,8 +185,6 @@ func (qdb *S_QDB) MarkCompleted(key string) error {
 	return nil
 }
 func (qdb *S_QDB) MarkFailed(key string, errMsg string) error {
-	//Get Message from Delayed or Pending and add to Failed
-	//TODO IFs
 	qmsg, err := qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_FAILED, "")
 	if err != nil {
 		return err
@@ -193,7 +199,7 @@ func (qdb *S_QDB) MarkFailed(key string, errMsg string) error {
 
 func (qdb *S_QDB) CreateAndPushQMSG(topic string, message string) {
 	qmsg := new(S_QMSG)
-	qmsg.RawKey = DButils.GetNextKey(qdb.DB())
+	qmsg.RawKey = Utils.GenerateULID()
 	qmsg.Key = (Defs.STATUS_PENDING + ":" + qmsg.RawKey)
 	qmsg.Value = message
 	qmsg.Status = Defs.STATUS_PENDING
