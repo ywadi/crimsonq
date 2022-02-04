@@ -70,8 +70,13 @@ func Select(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 func Destroy(con redcon.Conn, args ...[][]byte) error {
-	//TODO
-	//consumerId := string(args[0][0])
+	consumerId := string(args[0][0])
+	if crimsonQ.ConsumerExists(consumerId) {
+		crimsonQ.DestroyQDB(consumerId)
+		con.WriteString("ok")
+	} else {
+		con.WriteError(Defs.ERRincorrectConsumerId)
+	}
 	return nil
 }
 
@@ -278,7 +283,7 @@ func initCommands() {
 		"subscribe":         {Function: Subscribe, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 		"exists":            {Function: Exists, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
 		"select":            {Function: Select, ArgsCmd: []string{"consumerId", "topicFilters"}, RequiresConsumerId: false},
-		"destroy":           {Function: Destroy, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"destroy_consumer":  {Function: Destroy, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 		"list":              {Function: List, ArgsCmd: []string{}, RequiresConsumerId: false},
 		"msg_keys":          {Function: Msg_Keys, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 		"msg_push_topic":    {Function: Msg_Push_Topic, ArgsCmd: []string{"topicString", "messageString"}, RequiresConsumerId: false},
@@ -293,28 +298,32 @@ func initCommands() {
 		"flush_failed":      {Function: Flush_Failed, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 	}
 }
+
 func execCommand(conn redcon.Conn, cmd redcon.Command) {
-	// z := [][]byte{}
-	// for _, y := range strings.Split(string(cmd.Args[0]), ",") {
-	// 	z = append(z, []byte(y))
-	// }
-	// cmd.Args = z
 	cCmd := strings.ToLower(string(cmd.Args[0]))
-	if conn.Context().(ConnContext).Auth || cCmd == "auth" || true {
+	if conn.Context().(ConnContext).Auth || cCmd == "auth" {
 		if val, ok := Commands[cCmd]; ok {
+
 			//Check if the select context is there, it is inject into args as a first after command arg
-			if val.RequiresConsumerId {
-				if conn.Context().(ConnContext).SelectDB != "" {
-					//Add consumerId as first argument
-					cmd.Args = append([][]byte{[]byte(conn.Context().(ConnContext).SelectDB)}, cmd.Args...)
+			if val.RequiresConsumerId && conn.Context().(ConnContext).SelectDB != "" {
+				//Inject consumer ID as arg 0 ; which is where it is positioned
+				consumerId := []byte(conn.Context().(ConnContext).SelectDB)
+				placeholder := []([]byte){[]byte("x")}
+				cmd.Args = append(placeholder, cmd.Args...)
+				cmd.Args[0] = cmd.Args[1]
+				cmd.Args[1] = consumerId
+				for _, x := range cmd.Args {
+					fmt.Println(string(x))
 				}
 			}
+
 			if len(val.ArgsCmd) == len(cmd.Args)-1 {
 				val.Function.(func(con redcon.Conn, values ...[][]byte) error)(conn, cmd.Args[1:])
 			} else {
 				conn.WriteError("Incorrect number of arguments for " + cCmd + ", expected " + string(len(cmd.Args)-1) + "(" + strings.Join(val.ArgsCmd, ",") + ") but got " + fmt.Sprint(len(cmd.Args)) + " Args")
 			}
 			return
+
 		}
 		conn.WriteError("incorrect command")
 	} else {

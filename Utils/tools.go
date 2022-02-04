@@ -69,3 +69,12 @@ func GenerateULID() string {
 	entropy := ulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)
 	return (ulid.MustNew(ulid.Timestamp(t), entropy)).String()
 }
+
+func SliceContains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}

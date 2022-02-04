@@ -1,14 +1,11 @@
-// Once connected send number of messages 
-// Check command for messages 
-// Pull to return Key 
-/msg_fail working, but says incorrect msg id, needs to be checked on why 
-//use DB Subscribe to watch keys and changes
+// Once connected send number of messages , create command to poll from client
+// Add set topics command and remove it from select 
+// Listing of message with all values as json for web services 
 
+// use DB Subscribe to watch keys and changes
+// When complete or fail a message , what if it moved when you send the key! ???
 
-//Show a message set of data 
-//When complete or fail a message , what if it moved when you send the key! shoud we use the raw key ? 
-
-//DB transaction conflict on concurrency 
-//Watch dog not working on GOQ ...> turns out that creating a new consumer caused it to store in correctly in the QDBpool ?!
-
-// Implement how many messages to be in active at once / concurrency
+Enhancements
+//Implement how many messages to be in active at once / concurrency
+//Implement fail retry top or end of queue, to be setting
+//Add remove topics from consumer ? Or just allow on reselect to create ?

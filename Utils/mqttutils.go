@@ -45,6 +45,6 @@ func routeSplit(route string) []string {
 
 // match takes the topic string of the published message and does a basic compare to the
 // string of the current Route, if they match it returns true
-func MQTTMatch(r string, topic string) bool { //TODO:FIX
+func MQTTMatch(r string, topic string) bool {
 	return r == topic || routeIncludesTopic(r, topic)
 }

@@ -2,6 +2,7 @@ package DButils
 
 import (
 	"log"
+	"os"
 	"ywadi/goq/Defs"
 	"ywadi/goq/Utils"
 
@@ -16,6 +17,10 @@ func CreateDb(dbname string, dbpath string) (database *badger.DB, err error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+func DestroyDb(dbname string, dbpath string) {
+	os.RemoveAll(dbpath + "/" + dbname)
 }
 
 func GetNextKey(qdb *badger.DB) string {

@@ -73,6 +73,11 @@ func (goq *S_GOQ) CreateQDB(consumerId string, QDBpath string, QdbTopicFilters s
 	goq.QDBPool[consumerId] = &qdb
 }
 
+func (goq *S_GOQ) DestroyQDB(consumerId string) {
+	goq.QDBPool[consumerId].Destroy()
+	DButils.DEL(goq.SystemDb, Defs.QDB_PREFIX+consumerId)
+}
+
 func (goq *S_GOQ) ListConsumers() []string {
 	var cList []string
 	for k := range goq.QDBPool {

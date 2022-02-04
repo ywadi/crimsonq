@@ -1,4 +1,3 @@
-//TODO Event manager for all actions and to go to logs
 package Structs
 
 import (
@@ -41,6 +40,7 @@ func (qdb *S_QDB) Init(QdbId string, QdbPath string, QdbTopicFilters []string) {
 func (qdb *S_QDB) Destroy() {
 	DBpool[qdb.QdbId].Close()
 	delete(DBpool, qdb.QdbId)
+	DButils.DestroyDb(qdb.QdbId, qdb.QdbPath)
 }
 
 func (qdb *S_QDB) Deserialize(data []byte) {
@@ -53,7 +53,6 @@ func (qdb *S_QDB) Serialize() []byte {
 	return Utils.Serialize(qdb)
 }
 
-//TODO this is nil on the pool
 func (qdb *S_QDB) DB() *badger.DB {
 	return DBpool[qdb.QdbId]
 }
@@ -67,18 +66,7 @@ func (qdb *S_QDB) CreateDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	qdb.SetDB(db) //TODO: Figure out why flagged
-}
-
-func (qdb *S_QDB) AddTopicFilter(newTopicFilter string) {
-	qdb.QdbTopicFilters = append(qdb.QdbTopicFilters, newTopicFilter)
-}
-
-//TODO
-func (qdb *S_QDB) RemoveTopicFilter() {
-	// for i, s := range qdb.QdbTopicFilters {
-	// 	//TODO: implement slice, is it by ref or var the s?!
-	// }
+	qdb.SetDB(db)
 }
 
 func (qdb *S_QDB) MoveMsg(key string, from string, to string, err string) (*S_QMSG, error) {
@@ -112,7 +100,6 @@ func (qdb *S_QDB) ExpireQmsgFromStatus() {
 }
 
 func (qdb *S_QDB) MoveBatchOlderThan(from string, to string, duration time.Duration) {
-	println(">>", qdb.DB().IsClosed())
 	qdb.DB().View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
@@ -185,16 +172,21 @@ func (qdb *S_QDB) MarkCompleted(key string) error {
 	return nil
 }
 func (qdb *S_QDB) MarkFailed(key string, errMsg string) error {
-	qmsg, err := qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_FAILED, "")
-	if err != nil {
-		return err
+
+	qmsg, err1 := qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_FAILED, "")
+	if err1 == nil {
+		qmsg.Error = errMsg
+		return nil
 	}
-	qmsg, err = qdb.MoveMsg(key, Defs.STATUS_PENDING, Defs.STATUS_FAILED, "")
-	if err != nil {
-		return err
+
+	qmsg, err2 := qdb.MoveMsg(key, Defs.STATUS_PENDING, Defs.STATUS_FAILED, "")
+	if err2 == nil {
+		qmsg.Error = errMsg
+		return nil
 	}
-	qmsg.Error = errMsg
-	return nil
+
+	return errors.New(err1.Error() + "::" + err2.Error())
+
 }
 
 func (qdb *S_QDB) CreateAndPushQMSG(topic string, message string) {

@@ -1,9 +1,13 @@
 package RedconQ
 
 import (
+	"fmt"
 	"log"
+	"strings"
 	"ywadi/goq/Structs"
+	"ywadi/goq/Utils"
 
+	"github.com/spf13/viper"
 	"github.com/tidwall/redcon"
 )
 
@@ -24,7 +28,15 @@ func StartRedCon(addr string, cq *Structs.S_GOQ) {
 		func(conn redcon.Conn) bool {
 			ConnContext := ConnContext{Auth: false, SelectDB: ""}
 			conn.SetContext(ConnContext)
-			return true
+			remoteIp := strings.Split(conn.RemoteAddr(), ":")[0]
+			fmt.Println("Client connected from ", remoteIp)
+			if viper.GetString("redcon_settings.ip_whitelist") == "*" {
+				return true
+			} else {
+				grant := Utils.SliceContains(viper.GetStringSlice("redcon_settings.ip_whitelist"), remoteIp)
+				return grant
+			}
+
 		},
 		func(conn redcon.Conn, err error) {
 			// This is called when the connection has been closed
