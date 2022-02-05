@@ -12,17 +12,19 @@ import (
 )
 
 // var mu sync.RWMutex
-var ps redcon.PubSub
+var PS redcon.PubSub
 
 func Ping(con redcon.Conn, args ...[][]byte) error {
 	con.WriteString("Pong! " + string(args[0][0]))
 	return nil
 }
+
 func Quit(con redcon.Conn, args ...[][]byte) error {
 	con.WriteString("Bye!")
 	con.Close()
 	return nil
 }
+
 func Auth(con redcon.Conn, args ...[][]byte) error {
 	if string(args[0][0]) == viper.GetString("redcon_settings.password") {
 		cntxt := con.Context().(ConnContext)
@@ -32,6 +34,7 @@ func Auth(con redcon.Conn, args ...[][]byte) error {
 	}
 	return nil
 }
+
 func Command(con redcon.Conn, args ...[][]byte) error {
 	con.WriteArray(len(Commands))
 	for k, v := range Commands {
@@ -43,7 +46,7 @@ func Command(con redcon.Conn, args ...[][]byte) error {
 func Subscribe(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
-		ps.Subscribe(con, consumerId)
+		PS.Subscribe(con, consumerId)
 	} else {
 		con.WriteError(Defs.ERRincorrectConsumerId)
 	}
@@ -58,14 +61,43 @@ func Exists(con redcon.Conn, args ...[][]byte) error {
 func Select(con redcon.Conn, args ...[][]byte) error {
 	ctx := con.Context().(ConnContext)
 	consumerId := string(args[0][0])
-	topicFilters := string(args[0][1])
 	if crimsonQ.ConsumerExists(consumerId) {
 		ctx.SelectDB = consumerId
 		con.SetContext(ctx)
-		con.WriteString("Selected [" + consumerId + "]")
+		con.WriteString("Selected:" + consumerId)
 	} else {
-		crimsonQ.CreateQDB(consumerId, viper.GetString("crimson_settings.data_rootpath"), topicFilters)
+		crimsonQ.CreateQDB(consumerId, viper.GetString("crimson_settings.data_rootpath"))
 		con.WriteString("No such consumer id, created and selecting " + consumerId)
+	}
+	return nil
+}
+
+func SetConsumerTopics(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	topicFilters := string(args[0][1])
+	if crimsonQ.ConsumerExists(consumerId) {
+		crimsonQ.SetTopics(consumerId, topicFilters)
+		con.WriteString("ok")
+	} else {
+		err := errors.New(Defs.ERRincorrectConsumerId)
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
+	return nil
+}
+
+func GetConsumerTopics(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	if crimsonQ.ConsumerExists(consumerId) {
+		topics := crimsonQ.GetTopics(consumerId)
+		con.WriteArray(len(topics))
+		for _, t := range topics {
+			con.WriteString(t)
+		}
+	} else {
+		err := errors.New(Defs.ERRincorrectConsumerId)
+		con.WriteError(fmt.Sprint(err))
+		return err
 	}
 	return nil
 }
@@ -103,12 +135,26 @@ func Msg_Keys(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
+func Msg_Counts(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	counts, err := crimsonQ.GetKeyCount(consumerId)
+	if err != nil {
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
+	con.WriteArray(len(counts))
+	for k, v := range counts {
+		con.WriteBulkString(k + ":" + strconv.Itoa(int(v)))
+	}
+	return nil
+}
+
 func Msg_Push_Topic(con redcon.Conn, args ...[][]byte) error {
 	topic := string(args[0][0])
 	message := string(args[0][1])
 	consumers := crimsonQ.PushTopic(topic, message)
-	for _, s := range consumers {
-		ps.Publish(s.QdbId, "new_message")
+	for consumer, msgkey := range consumers {
+		PS.Publish(consumer, msgkey)
 	}
 	con.WriteString("Ok")
 	return nil
@@ -119,14 +165,8 @@ func Msg_Push_Consumer(con redcon.Conn, args ...[][]byte) error {
 	topic := string(args[0][0])
 	message := string(args[0][1])
 	if crimsonQ.ConsumerExists(consumerId) {
-		crimsonQ.PushConsumer(consumerId, "direct:"+topic, message)
-		all, err := crimsonQ.ListAllKeys(consumerId)
-		if err != nil {
-			err := errors.New(Defs.ERRnoDataReturn)
-			con.WriteError(fmt.Sprint(err))
-			return err
-		}
-		ps.Publish(consumerId, fmt.Sprint(len(all)))
+		msgkey := crimsonQ.PushConsumer(consumerId, "direct:"+topic, message)
+		PS.Publish(consumerId, msgkey)
 		con.WriteString("Ok")
 		return nil
 	} else {
@@ -142,7 +182,7 @@ func Msg_Pull(con redcon.Conn, args ...[][]byte) error {
 	if crimsonQ.ConsumerExists(consumerId) {
 		msg, err := crimsonQ.Pull(consumerId)
 		if err != nil {
-			con.WriteError(fmt.Sprint(err))
+			con.WriteNull()
 			return err
 		}
 		con.WriteString(msg.JsonStringify())
@@ -164,6 +204,29 @@ func Msg_Del(con redcon.Conn, args ...[][]byte) error {
 			return err
 		}
 		con.WriteString("Ok")
+		return nil
+	} else {
+		err := errors.New(Defs.ERRincorrectConsumerId)
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
+}
+
+func Msg_Get_Status_Json(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	status := strings.ToLower(string(args[0][1]))
+	if !(status == Defs.STATUS_ACTIVE || status == Defs.STATUS_COMPLETED || status == Defs.STATUS_DELAYED || status == Defs.STATUS_FAILED || status == Defs.STATUS_PENDING) {
+		sError := errors.New(Defs.ERRIncorrectStatus)
+		con.WriteError(sError.Error())
+		return sError
+	}
+	if crimsonQ.ConsumerExists(consumerId) {
+		json, err := crimsonQ.GetAllByStatusJson(consumerId, status)
+		if err != nil {
+			con.WriteError(fmt.Sprint(err))
+			return err
+		}
+		con.WriteString(json)
 		return nil
 	} else {
 		err := errors.New(Defs.ERRincorrectConsumerId)
@@ -276,31 +339,39 @@ type RedConCmds struct {
 
 func initCommands() {
 	Commands = map[string]RedConCmds{
-		"ping":              {Function: Ping, ArgsCmd: []string{"messageString"}, RequiresConsumerId: false},
-		"quit":              {Function: Quit, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"auth":              {Function: Auth, ArgsCmd: []string{"password"}, RequiresConsumerId: false},
-		"command":           {Function: Command, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"subscribe":         {Function: Subscribe, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"exists":            {Function: Exists, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
-		"select":            {Function: Select, ArgsCmd: []string{"consumerId", "topicFilters"}, RequiresConsumerId: false},
-		"destroy_consumer":  {Function: Destroy, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"list":              {Function: List, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"msg_keys":          {Function: Msg_Keys, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg_push_topic":    {Function: Msg_Push_Topic, ArgsCmd: []string{"topicString", "messageString"}, RequiresConsumerId: false},
-		"msg_push_consumer": {Function: Msg_Push_Consumer, ArgsCmd: []string{"consumerId", "messageString"}, RequiresConsumerId: true},
-		"msg_pull":          {Function: Msg_Pull, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg_del":           {Function: Msg_Del, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
-		"msg_fail":          {Function: Msg_Fail, ArgsCmd: []string{"consumerId", "messageId", "errMsg"}, RequiresConsumerId: true},
-		"msg_complete":      {Function: Msg_Complete, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
-		"msg_retry":         {Function: Msg_Retry, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
-		"msg_retry_all":     {Function: Msg_Retry_All, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"flush_complete":    {Function: Flush_Complete, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"flush_failed":      {Function: Flush_Failed, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"ping":                {Function: Ping, ArgsCmd: []string{"messageString"}, RequiresConsumerId: false},
+		"quit":                {Function: Quit, ArgsCmd: []string{}, RequiresConsumerId: false},
+		"auth":                {Function: Auth, ArgsCmd: []string{"password"}, RequiresConsumerId: false},
+		"command":             {Function: Command, ArgsCmd: []string{}, RequiresConsumerId: false},
+		"subscribe":           {Function: Subscribe, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"exists":              {Function: Exists, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
+		"select":              {Function: Select, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
+		"destroy_consumer":    {Function: Destroy, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"list":                {Function: List, ArgsCmd: []string{}, RequiresConsumerId: false},
+		"msg_keys":            {Function: Msg_Keys, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"msg_counts":          {Function: Msg_Counts, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"msg_push_topic":      {Function: Msg_Push_Topic, ArgsCmd: []string{"topicString", "messageString"}, RequiresConsumerId: false},
+		"msg_push_consumer":   {Function: Msg_Push_Consumer, ArgsCmd: []string{"consumerId", "messageString"}, RequiresConsumerId: true},
+		"msg_pull":            {Function: Msg_Pull, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"msg_del":             {Function: Msg_Del, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
+		"msg_fail":            {Function: Msg_Fail, ArgsCmd: []string{"consumerId", "messageId", "errMsg"}, RequiresConsumerId: true},
+		"msg_complete":        {Function: Msg_Complete, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
+		"msg_retry":           {Function: Msg_Retry, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
+		"msg_retry_all":       {Function: Msg_Retry_All, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"flush_complete":      {Function: Flush_Complete, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"flush_failed":        {Function: Flush_Failed, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"set_consumer_topics": {Function: SetConsumerTopics, ArgsCmd: []string{"consumerId", "topics"}, RequiresConsumerId: true},
+		"get_consumer_topics": {Function: GetConsumerTopics, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"msg_get_status_json": {Function: Msg_Get_Status_Json, ArgsCmd: []string{"consumerId", "status"}, RequiresConsumerId: true},
 	}
 }
 
 func execCommand(conn redcon.Conn, cmd redcon.Command) {
 	cCmd := strings.ToLower(string(cmd.Args[0]))
+	for _, x := range cmd.Args {
+		fmt.Print(string(x), " ")
+	}
+	fmt.Println()
 	if conn.Context().(ConnContext).Auth || cCmd == "auth" {
 		if val, ok := Commands[cCmd]; ok {
 
@@ -312,9 +383,6 @@ func execCommand(conn redcon.Conn, cmd redcon.Command) {
 				cmd.Args = append(placeholder, cmd.Args...)
 				cmd.Args[0] = cmd.Args[1]
 				cmd.Args[1] = consumerId
-				for _, x := range cmd.Args {
-					fmt.Println(string(x))
-				}
 			}
 
 			if len(val.ArgsCmd) == len(cmd.Args)-1 {

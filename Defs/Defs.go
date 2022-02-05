@@ -23,4 +23,5 @@ const (
 const (
 	ERRincorrectConsumerId string = "001:incorrect_consumer_id"
 	ERRnoDataReturn        string = "002:no_data_returned"
+	ERRIncorrectStatus     string = "003:incorrect_status"
 )

@@ -1,11 +1,12 @@
-// Once connected send number of messages , create command to poll from client
-// Add set topics command and remove it from select 
-// Listing of message with all values as json for web services 
-
 // use DB Subscribe to watch keys and changes
 // When complete or fail a message , what if it moved when you send the key! ???
+// Heartbeat with pending messages on sub channel 
+//Fix struct packages to sub ?
+// Rename Commands, they are messy 
+// No need to use the status with the id , each stage knows what it needs
 
 Enhancements
 //Implement how many messages to be in active at once / concurrency
 //Implement fail retry top or end of queue, to be setting
-//Add remove topics from consumer ? Or just allow on reselect to create ?
+//Get Single Key populated 
+// Inactive consumer before kill

@@ -96,7 +96,7 @@ func DEQ(db *badger.DB) (key []byte, val []byte, xe error) {
 			if err != nil {
 				return err
 			}
-			break //Just get 1 from itterator, Defer will kill it
+			break
 		}
 		return nil
 	})

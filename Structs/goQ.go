@@ -65,12 +65,22 @@ func (goq *S_GOQ) StartWatchDog() {
 	}()
 }
 
-func (goq *S_GOQ) CreateQDB(consumerId string, QDBpath string, QdbTopicFilters string) {
+func (goq *S_GOQ) CreateQDB(consumerId string, QDBpath string) {
 	var qdb S_QDB
-	topicFilters := strings.Split(QdbTopicFilters, ",")
-	qdb.Init(consumerId, QDBpath, topicFilters)
+	qdb.Init(consumerId, QDBpath)
 	DButils.SET(goq.SystemDb, Defs.QDB_PREFIX+consumerId, qdb.Serialize())
 	goq.QDBPool[consumerId] = &qdb
+}
+
+func (goq *S_GOQ) SetTopics(consumerId string, topics string) {
+	topicsArray := strings.Split(topics, ",")
+	consumerQ := goq.QDBPool[consumerId]
+	consumerQ.SetTopics(topicsArray)
+}
+
+func (goq *S_GOQ) GetTopics(consumerId string) []string {
+	consumerQ := goq.QDBPool[consumerId]
+	return consumerQ.GetTopics()
 }
 
 func (goq *S_GOQ) DestroyQDB(consumerId string) {
@@ -95,24 +105,26 @@ func (goq *S_GOQ) ConsumerExists(consumerId string) bool {
 }
 
 //Push to consumer
-func (goq *S_GOQ) PushConsumer(consumerId string, topic string, message string) {
+func (goq *S_GOQ) PushConsumer(consumerId string, topic string, message string) string {
 	consumerQ := goq.QDBPool[consumerId]
-	consumerQ.CreateAndPushQMSG(topic, message)
+	qmsg := consumerQ.CreateAndPushQMSG(topic, message)
+	return qmsg.Key
 }
 
 //Push to topic
-func (goq *S_GOQ) PushTopic(topic string, message string) []*S_QDB {
-	consumersPushed := []*S_QDB{}
+func (goq *S_GOQ) PushTopic(topic string, message string) map[string]string {
+	res := make(map[string]string)
+
 	consumers := goq.QDBPool
 	for _, s := range consumers {
 		for _, x := range s.QdbTopicFilters {
-			if Utils.MQTTMatch(x, topic) {
-				s.CreateAndPushQMSG(topic, message)
-				consumersPushed = append(consumersPushed, s)
+			if Utils.MQTTMatch(topic, x) {
+				qmsg := s.CreateAndPushQMSG(topic, message)
+				res[s.QdbId] = qmsg.Key
 			}
 		}
 	}
-	return consumersPushed
+	return res
 }
 
 //Pull from consumer
@@ -176,7 +188,30 @@ func (goq *S_GOQ) ClearFailed(consumerId string) {
 func (goq *S_GOQ) ListAllKeys(consumerId string) ([]string, error) {
 	consumerQ := goq.QDBPool[consumerId]
 	if goq.ConsumerExists(consumerId) {
-		return consumerQ.GetAllKeys(), nil
+		keys, _ := consumerQ.GetAllKeys()
+		return keys, nil
+	}
+	return nil, errors.New(Defs.ERRincorrectConsumerId)
+}
+
+func (goq *S_GOQ) GetAllByStatusJson(consumerId string, status string) (string, error) {
+	consumerQ := goq.QDBPool[consumerId]
+	if goq.ConsumerExists(consumerId) {
+		json, err := consumerQ.GetMsgByStatusJson(status)
+		if err != nil {
+			return "", err
+		}
+		return json, nil
+	} else {
+		return "", errors.New(Defs.ERRincorrectConsumerId)
+	}
+}
+
+func (goq *S_GOQ) GetKeyCount(consumerId string) (map[string]uint16, error) {
+	consumerQ := goq.QDBPool[consumerId]
+	if goq.ConsumerExists(consumerId) {
+		_, Count := consumerQ.GetAllKeys()
+		return Count, nil
 	}
 	return nil, errors.New("001:incorrect_consumer_id")
 }
