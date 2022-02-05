@@ -388,7 +388,7 @@ func execCommand(conn redcon.Conn, cmd redcon.Command) {
 			if len(val.ArgsCmd) == len(cmd.Args)-1 {
 				val.Function.(func(con redcon.Conn, values ...[][]byte) error)(conn, cmd.Args[1:])
 			} else {
-				conn.WriteError("Incorrect number of arguments for " + cCmd + ", expected " + string(len(cmd.Args)-1) + "(" + strings.Join(val.ArgsCmd, ",") + ") but got " + fmt.Sprint(len(cmd.Args)) + " Args")
+				conn.WriteError("Incorrect number of arguments for " + cCmd + ", expected " + fmt.Sprint(len(cmd.Args)-1) + "(" + strings.Join(val.ArgsCmd, ",") + ") but got " + fmt.Sprint(len(cmd.Args)) + " Args")
 			}
 			return
 
