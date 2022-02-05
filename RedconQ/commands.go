@@ -26,7 +26,7 @@ func Quit(con redcon.Conn, args ...[][]byte) error {
 }
 
 func Auth(con redcon.Conn, args ...[][]byte) error {
-	if string(args[0][0]) == viper.GetString("redcon_settings.password") {
+	if string(args[0][0]) == viper.GetString("crimson_settings.password") {
 		cntxt := con.Context().(ConnContext)
 		cntxt.Auth = true
 		con.SetContext(cntxt)
@@ -339,30 +339,30 @@ type RedConCmds struct {
 
 func initCommands() {
 	Commands = map[string]RedConCmds{
-		"ping":                {Function: Ping, ArgsCmd: []string{"messageString"}, RequiresConsumerId: false},
-		"quit":                {Function: Quit, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"auth":                {Function: Auth, ArgsCmd: []string{"password"}, RequiresConsumerId: false},
-		"command":             {Function: Command, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"subscribe":           {Function: Subscribe, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"exists":              {Function: Exists, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
-		"select":              {Function: Select, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
-		"destroy_consumer":    {Function: Destroy, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"list":                {Function: List, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"msg_keys":            {Function: Msg_Keys, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg_counts":          {Function: Msg_Counts, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg_push_topic":      {Function: Msg_Push_Topic, ArgsCmd: []string{"topicString", "messageString"}, RequiresConsumerId: false},
-		"msg_push_consumer":   {Function: Msg_Push_Consumer, ArgsCmd: []string{"consumerId", "messageString"}, RequiresConsumerId: true},
-		"msg_pull":            {Function: Msg_Pull, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg_del":             {Function: Msg_Del, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
-		"msg_fail":            {Function: Msg_Fail, ArgsCmd: []string{"consumerId", "messageId", "errMsg"}, RequiresConsumerId: true},
-		"msg_complete":        {Function: Msg_Complete, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
-		"msg_retry":           {Function: Msg_Retry, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
-		"msg_retry_all":       {Function: Msg_Retry_All, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"flush_complete":      {Function: Flush_Complete, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"flush_failed":        {Function: Flush_Failed, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"set_consumer_topics": {Function: SetConsumerTopics, ArgsCmd: []string{"consumerId", "topics"}, RequiresConsumerId: true},
-		"get_consumer_topics": {Function: GetConsumerTopics, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg_get_status_json": {Function: Msg_Get_Status_Json, ArgsCmd: []string{"consumerId", "status"}, RequiresConsumerId: true},
+		"ping":                    {Function: Ping, ArgsCmd: []string{"messageString"}, RequiresConsumerId: false},
+		"quit":                    {Function: Quit, ArgsCmd: []string{}, RequiresConsumerId: false},
+		"auth":                    {Function: Auth, ArgsCmd: []string{"password"}, RequiresConsumerId: false},
+		"command":                 {Function: Command, ArgsCmd: []string{}, RequiresConsumerId: false},
+		"subscribe":               {Function: Subscribe, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"consumer_exists":         {Function: Exists, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
+		"consumer_select":         {Function: Select, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
+		"consumer_destroy":        {Function: Destroy, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"consumer_list":           {Function: List, ArgsCmd: []string{}, RequiresConsumerId: false},
+		"msg_keys":                {Function: Msg_Keys, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"msg_counts":              {Function: Msg_Counts, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"msg_push_topic":          {Function: Msg_Push_Topic, ArgsCmd: []string{"topicString", "messageString"}, RequiresConsumerId: false},
+		"msg_push_consumer":       {Function: Msg_Push_Consumer, ArgsCmd: []string{"consumerId", "messageString"}, RequiresConsumerId: true},
+		"msg_pull":                {Function: Msg_Pull, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"msg_del":                 {Function: Msg_Del, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
+		"msg_fail":                {Function: Msg_Fail, ArgsCmd: []string{"consumerId", "messageId", "errMsg"}, RequiresConsumerId: true},
+		"msg_complete":            {Function: Msg_Complete, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
+		"msg_retry":               {Function: Msg_Retry, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
+		"msg_retry_all":           {Function: Msg_Retry_All, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"consumer_flush_complete": {Function: Flush_Complete, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"consumer_flush_failed":   {Function: Flush_Failed, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"consumer_topics_set":     {Function: SetConsumerTopics, ArgsCmd: []string{"consumerId", "topics"}, RequiresConsumerId: true},
+		"consumer_topics_get":     {Function: GetConsumerTopics, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"msg_list_json":           {Function: Msg_Get_Status_Json, ArgsCmd: []string{"consumerId", "status"}, RequiresConsumerId: true},
 	}
 }
 

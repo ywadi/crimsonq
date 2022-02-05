@@ -2,6 +2,7 @@ package Structs
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -24,6 +25,7 @@ var wg sync.WaitGroup
 func (goq *S_GOQ) Init() {
 	wg.Add(1)
 	goq.StartWatchDog()
+	goq.StartDiskSyncTime()
 	go func() {
 		goq.QDBPool = make(map[string]*S_QDB)
 		Utils.PrintANSIlogo()
@@ -63,6 +65,29 @@ func (goq *S_GOQ) StartWatchDog() {
 			}
 		}
 	}()
+}
+
+func (goq *S_GOQ) StartDiskSyncTime() {
+	println("DiskSync Timer Started...")
+	if !viper.GetBool("crimson_settings.db_full_persist") {
+		ticker := time.NewTicker(time.Duration(viper.GetInt64("crimson_settings.disk_sync_seconds")) * time.Second)
+		done := make(chan bool)
+		go func() {
+			for {
+				select {
+				case <-done:
+					return
+				case <-ticker.C:
+					for _, s := range goq.QDBPool {
+						fmt.Println("Synced data to disk:" + s.QdbId)
+						s.DB().Sync()
+					}
+
+				}
+			}
+		}()
+	}
+
 }
 
 func (goq *S_GOQ) CreateQDB(consumerId string, QDBpath string) {

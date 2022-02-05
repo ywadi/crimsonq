@@ -11,5 +11,5 @@ import (
 func main() {
 	viperq.Init()
 	crimsonQ := Structs.S_GOQ{}
-	RedconQ.StartRedCon(":"+viper.GetString("redcon_settings.port"), &crimsonQ)
+	RedconQ.StartRedCon(":"+viper.GetString("crimson_settings.port"), &crimsonQ)
 }

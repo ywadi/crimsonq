@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
+	"ywadi/goq/Defs"
 	"ywadi/goq/Structs"
 	"ywadi/goq/Utils"
 
@@ -21,8 +23,9 @@ var crimsonQ *Structs.S_GOQ
 func StartRedCon(addr string, cq *Structs.S_GOQ) {
 	initCommands()
 	go cq.Init()
+	HeartBeat()
 	crimsonQ = cq
-	go log.Printf("started server at %s", addr)
+	log.Printf("started server at %s", addr)
 	err := redcon.ListenAndServe(addr,
 		execCommand,
 		func(conn redcon.Conn) bool {
@@ -30,10 +33,10 @@ func StartRedCon(addr string, cq *Structs.S_GOQ) {
 			conn.SetContext(ConnContext)
 			remoteIp := strings.Split(conn.RemoteAddr(), ":")[0]
 			fmt.Println("Client connected from ", remoteIp)
-			if viper.GetString("redcon_settings.ip_whitelist") == "*" {
+			if viper.GetString("crimson_settings.ip_whitelist") == "*" {
 				return true
 			} else {
-				grant := Utils.SliceContains(viper.GetStringSlice("redcon_settings.ip_whitelist"), remoteIp)
+				grant := Utils.SliceContains(viper.GetStringSlice("crimson_settings.ip_whitelist"), remoteIp)
 				return grant
 			}
 
@@ -47,4 +50,27 @@ func StartRedCon(addr string, cq *Structs.S_GOQ) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func HeartBeat() {
+	println("Heartbeat Started...")
+	ticker := time.NewTicker(time.Duration(viper.GetInt64("crimson_settings.heartbeat_seconds")) * time.Second)
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				for _, s := range crimsonQ.QDBPool {
+					fmt.Println("Heartbeat")
+					json, err := crimsonQ.GetAllByStatusJson(s.QdbId, Defs.STATUS_PENDING)
+					if err != nil {
+						fmt.Println("JSON ERROR")
+					}
+					PS.Publish(s.QdbId, json)
+				}
+			}
+		}
+	}()
 }

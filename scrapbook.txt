@@ -63,3 +63,18 @@ func main() {
 
 
 	redis-benchmark -c 500 -p 9001  -r 100 -n 100 msg_push_consumer,yousef,abc
+
+
+
+				if val.RequiresConsumerId {
+				if conn.Context().(ConnContext).SelectDB != "" {
+					//Add consumerId as first argument
+					cmd.Args = append([][]byte{[]byte(conn.Context().(ConnContext).SelectDB)}, cmd.Args...)
+				}
+			}
+			if len(val.ArgsCmd) == len(cmd.Args)-1 {
+				val.Function.(func(con redcon.Conn, values ...[][]byte) error)(conn, cmd.Args[1:])
+			} else {
+				conn.WriteError("Incorrect number of arguments for " + cCmd + ", expected " + string(len(cmd.Args)-1) + "(" + strings.Join(val.ArgsCmd, ",") + ") but got " + fmt.Sprint(len(cmd.Args)) + " Args")
+			}
+			return
