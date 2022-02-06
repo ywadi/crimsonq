@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"ywadi/goq/Defs"
 
 	"github.com/spf13/viper"
@@ -26,11 +27,13 @@ func Quit(con redcon.Conn, args ...[][]byte) error {
 }
 
 func Auth(con redcon.Conn, args ...[][]byte) error {
+	fmt.Println(">>>", con)
 	if string(args[0][0]) == viper.GetString("crimson_settings.password") {
 		cntxt := con.Context().(ConnContext)
 		cntxt.Auth = true
 		con.SetContext(cntxt)
-		con.WriteString("Yo!")
+		con.WriteString("ok")
+
 	}
 	return nil
 }
@@ -58,17 +61,12 @@ func Exists(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func Select(con redcon.Conn, args ...[][]byte) error {
-	ctx := con.Context().(ConnContext)
+func Consumer_Create(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
-	if crimsonQ.ConsumerExists(consumerId) {
-		ctx.SelectDB = consumerId
-		con.SetContext(ctx)
-		con.WriteString("Selected:" + consumerId)
-	} else {
-		crimsonQ.CreateQDB(consumerId, viper.GetString("crimson_settings.data_rootpath"))
-		con.WriteString("No such consumer id, created and selecting " + consumerId)
-	}
+	consumerTopics := string(args[0][1])
+	crimsonQ.CreateQDB(consumerId, viper.GetString("crimson_settings.data_rootpath"))
+	crimsonQ.SetTopics(consumerId, consumerTopics)
+	con.WriteString("Created:" + consumerId)
 	return nil
 }
 
@@ -349,7 +347,7 @@ func initCommands() {
 		"command":                 {Function: Command, ArgsCmd: []string{}, RequiresConsumerId: false},
 		"subscribe":               {Function: Subscribe, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 		"consumer.exists":         {Function: Exists, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
-		"select":                  {Function: Select, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
+		"consumer.create":         {Function: Consumer_Create, ArgsCmd: []string{"consumerId", "topics"}, RequiresConsumerId: false},
 		"consumer.destroy":        {Function: Destroy, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 		"consumer.list":           {Function: List, ArgsCmd: []string{}, RequiresConsumerId: false},
 		"msg.keys":                {Function: Msg_Keys, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
@@ -371,36 +369,35 @@ func initCommands() {
 }
 
 func execCommand(conn redcon.Conn, cmd redcon.Command) {
-	cCmd := strings.ToLower(string(cmd.Args[0]))
-	for _, x := range cmd.Args {
-		fmt.Print(string(x), " ")
-	}
-	fmt.Println()
-	if conn.Context().(ConnContext).Auth || cCmd == "auth" {
-		if val, ok := Commands[cCmd]; ok {
+	var wg sync.WaitGroup
+	wg.Add(1)
 
-			//Check if the select context is there, it is inject into args as a first after command arg
-			if val.RequiresConsumerId && conn.Context().(ConnContext).SelectDB != "" {
-				//Inject consumer ID as arg 0 ; which is where it is positioned
-				consumerId := []byte(conn.Context().(ConnContext).SelectDB)
-				placeholder := []([]byte){[]byte("x")}
-				cmd.Args = append(placeholder, cmd.Args...)
-				cmd.Args[0] = cmd.Args[1]
-				cmd.Args[1] = consumerId
-			}
-
-			if len(val.ArgsCmd) == len(cmd.Args)-1 {
-				val.Function.(func(con redcon.Conn, values ...[][]byte) error)(conn, cmd.Args[1:])
-			} else {
-				conn.WriteError("Incorrect number of arguments for " + cCmd + ", expected " + fmt.Sprint(len(cmd.Args)-1) + "(" + strings.Join(val.ArgsCmd, ",") + ") but got " + fmt.Sprint(len(cmd.Args)) + " Args")
-			}
-			return
-
+	go func() {
+		cCmd := strings.ToLower(string(cmd.Args[0]))
+		for _, x := range cmd.Args {
+			fmt.Print(string(x), " ")
 		}
-		conn.WriteError("incorrect command")
-	} else {
-		conn.WriteError("Auth Error: You Shall not pass!")
-		conn.Close()
-	}
+		fmt.Println()
+		if conn.Context().(ConnContext).Auth || cCmd == "auth" {
+			if val, ok := Commands[cCmd]; ok {
 
+				if len(val.ArgsCmd) == len(cmd.Args)-1 {
+					val.Function.(func(con redcon.Conn, values ...[][]byte) error)(conn, cmd.Args[1:])
+					wg.Done()
+				} else {
+					conn.WriteError("Incorrect number of arguments for " + cCmd + ", expected " + fmt.Sprint(len(cmd.Args)-1) + "(" + strings.Join(val.ArgsCmd, ",") + ") but got " + fmt.Sprint(len(cmd.Args)) + " Args")
+					wg.Done()
+				}
+				return
+
+			}
+			conn.WriteError("incorrect command")
+			wg.Done()
+		} else {
+			conn.WriteError("Auth Error: You Shall not pass!")
+			wg.Done()
+			conn.Close()
+		}
+	}()
+	wg.Wait()
 }

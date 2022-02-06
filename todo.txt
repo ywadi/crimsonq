@@ -1,4 +1,4 @@
-//Fix subscribe when SELECT is active for some reason
+//Fix subscribe when SELECT is active for some reason --> Remove select, more issues than solutions comming from it ! 
 
 // Inactive consumer before kill
 // consumer_inactive_destroy_hours: 1
@@ -12,3 +12,6 @@ Enhancements
 
 //DockerComposer 
 
+
+
+// ! Test concurrecny !-> Critical  -> benchmark 
