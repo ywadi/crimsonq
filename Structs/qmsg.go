@@ -7,7 +7,7 @@ import (
 )
 
 type S_QMSG struct {
-	Key           string
+	Key           string               `json:"-"`
 	RawKey        string               `json:"key"`
 	Topic         string               `json:"topic"`
 	Value         string               `json:"value"`
