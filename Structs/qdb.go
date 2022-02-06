@@ -17,9 +17,10 @@ import (
 )
 
 type S_QDB struct {
-	QdbId           string
-	QdbPath         string
-	QdbTopicFilters []string
+	QdbId            string
+	QdbPath          string
+	QdbTopicFilters  []string
+	Last_Active_Pull time.Time
 }
 
 var DBpool map[string]*badger.DB
@@ -36,10 +37,6 @@ func (qdb *S_QDB) Init(QdbId string, QdbPath string) {
 	initDbPool()
 	qdb.CreateDB()
 	//RedconQ.PS.Publish("_system", fmt.Sprint("Initiated ", QdbId, time.Now()))
-}
-
-func (qdb *S_QDB) SetTopics(QdbTopicFilters []string) {
-	qdb.QdbTopicFilters = QdbTopicFilters
 }
 
 func (qdb *S_QDB) GetTopics() []string {

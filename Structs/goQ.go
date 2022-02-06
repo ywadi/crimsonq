@@ -42,6 +42,7 @@ func (goq *S_GOQ) Init() {
 			qdb := S_QDB{}
 			qdb.Deserialize(s)
 			goq.QDBPool[qdb.QdbId] = &qdb
+			fmt.Println(qdb) //todo:remove
 		}
 		//wg.Done() //TODO: Command off channel
 	}()
@@ -92,15 +93,28 @@ func (goq *S_GOQ) StartDiskSyncTime() {
 
 func (goq *S_GOQ) CreateQDB(consumerId string, QDBpath string) {
 	var qdb S_QDB
+	qdb.Last_Active_Pull = time.Now()
 	qdb.Init(consumerId, QDBpath)
 	DButils.SET(goq.SystemDb, Defs.QDB_PREFIX+consumerId, qdb.Serialize())
 	goq.QDBPool[consumerId] = &qdb
 }
 
+func (goq *S_GOQ) UpdateQDBinDB(consumerId string) {
+	consumerQ := goq.QDBPool[consumerId]
+	DButils.SET(goq.SystemDb, Defs.QDB_PREFIX+consumerId, consumerQ.Serialize())
+}
+
 func (goq *S_GOQ) SetTopics(consumerId string, topics string) {
 	topicsArray := strings.Split(topics, ",")
 	consumerQ := goq.QDBPool[consumerId]
-	consumerQ.SetTopics(topicsArray)
+	consumerQ.QdbTopicFilters = topicsArray
+	goq.UpdateQDBinDB(consumerId)
+}
+
+func (goq *S_GOQ) SetLastPullDate(consumerId string) {
+	consumerQ := goq.QDBPool[consumerId]
+	consumerQ.Last_Active_Pull = time.Now()
+	goq.UpdateQDBinDB(consumerId)
 }
 
 func (goq *S_GOQ) GetTopics(consumerId string) []string {
@@ -157,6 +171,9 @@ func (goq *S_GOQ) PushTopic(topic string, message string) map[string]string {
 func (goq *S_GOQ) Pull(consumerId string) (*S_QMSG, error) {
 
 	consumerQ := goq.QDBPool[consumerId]
+	goq.SetLastPullDate(consumerId)
+	fmt.Println(consumerQ)
+
 	qmg, err := consumerQ.Pull()
 	if err != nil {
 		return nil, err

@@ -183,6 +183,7 @@ func Msg_Pull(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
 		msg, err := crimsonQ.Pull(consumerId)
+		crimsonQ.SetLastPullDate(consumerId)
 		if err != nil {
 			con.WriteNull()
 			return err
