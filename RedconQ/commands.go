@@ -156,7 +156,8 @@ func Msg_Push_Topic(con redcon.Conn, args ...[][]byte) error {
 	message := string(args[0][1])
 	consumers := crimsonQ.PushTopic(topic, message)
 	for consumer, msgkey := range consumers {
-		PS.Publish(consumer, msgkey)
+		msgkeySplit := strings.Split(msgkey, ":")
+		PS.Publish(consumer, msgkeySplit[1])
 	}
 	con.WriteString("Ok")
 	return nil
@@ -168,7 +169,8 @@ func Msg_Push_Consumer(con redcon.Conn, args ...[][]byte) error {
 	message := string(args[0][1])
 	if crimsonQ.ConsumerExists(consumerId) {
 		msgkey := crimsonQ.PushConsumer(consumerId, "direct:"+topic, message)
-		PS.Publish(consumerId, msgkey)
+		msgkeySplit := strings.Split(msgkey, ":")
+		PS.Publish(consumerId, msgkeySplit[1])
 		con.WriteString("Ok")
 		return nil
 	} else {

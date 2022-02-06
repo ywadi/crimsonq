@@ -1,7 +1,6 @@
 // LOGS FIX + DB logs 
 // DockerComposer 
-//Error on fail not being passed 
-//Subscribe remove status from the message being sent for single 
+// Error on fail not being passed 
 
 Enhancements
 // Get Single Key populated 
