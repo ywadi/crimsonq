@@ -78,3 +78,11 @@ func main() {
 				conn.WriteError("Incorrect number of arguments for " + cCmd + ", expected " + string(len(cmd.Args)-1) + "(" + strings.Join(val.ArgsCmd, ",") + ") but got " + fmt.Sprint(len(cmd.Args)) + " Args")
 			}
 			return
+
+
+
+			$GOPATH/src/ywadi/goq/
+
+			RUN go get -d -v
+# Build the binary.
+RUN go build -o /go/bin/crimsonq

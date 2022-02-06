@@ -110,6 +110,7 @@ func (goq *S_GOQ) GetTopics(consumerId string) []string {
 
 func (goq *S_GOQ) DestroyQDB(consumerId string) {
 	goq.QDBPool[consumerId].Destroy()
+	delete(goq.QDBPool, consumerId)
 	DButils.DEL(goq.SystemDb, Defs.QDB_PREFIX+consumerId)
 }
 
@@ -241,9 +242,9 @@ func (goq *S_GOQ) GetKeyCount(consumerId string) (map[string]uint16, error) {
 	return nil, errors.New("001:incorrect_consumer_id")
 }
 
-func (goq *S_GOQ) Del(consumerId string, messageId string) error {
+func (goq *S_GOQ) Del(status string, consumerId string, messageId string) error {
 	consumerQ := goq.QDBPool[consumerId]
-	err := consumerQ.Del(messageId)
+	err := consumerQ.Del(status, messageId)
 	if err != nil {
 		return err
 	}

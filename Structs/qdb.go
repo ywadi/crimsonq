@@ -47,7 +47,6 @@ func (qdb *S_QDB) GetTopics() []string {
 }
 
 func (qdb *S_QDB) Destroy() {
-	DBpool[qdb.QdbId].Close()
 	delete(DBpool, qdb.QdbId)
 	DButils.DestroyDb(qdb.QdbId, qdb.QdbPath)
 }
@@ -79,6 +78,7 @@ func (qdb *S_QDB) CreateDB() {
 }
 
 func (qdb *S_QDB) MoveMsg(key string, from string, to string, err string) (*S_QMSG, error) {
+	key = from + ":" + key
 	value, er := DButils.GET(qdb.DB(), key)
 	if er != nil {
 		return nil, er
@@ -147,8 +147,8 @@ func (qdb *S_QDB) Pull() (*S_QMSG, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	msgRes, err := qdb.MoveMsg(string(k), Defs.STATUS_PENDING, Defs.STATUS_ACTIVE, "")
+	keySplit := strings.Split(string(k), ":")
+	msgRes, err := qdb.MoveMsg(keySplit[1], Defs.STATUS_PENDING, Defs.STATUS_ACTIVE, "")
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +195,6 @@ func (qdb *S_QDB) MarkFailed(key string, errMsg string) error {
 	}
 
 	return errors.New(err1.Error() + "::" + err2.Error())
-
 }
 
 func (qdb *S_QDB) CreateAndPushQMSG(topic string, message string) *S_QMSG {
@@ -315,7 +314,8 @@ func (qdb *S_QDB) RetryAllFailed() error {
 	return nil
 }
 
-func (qdb *S_QDB) Del(messageId string) error {
+func (qdb *S_QDB) Del(status string, messageId string) error {
+	messageId = status + ":" + messageId
 	err := DButils.DEL(qdb.DB(), messageId)
 	if err != nil {
 		return err

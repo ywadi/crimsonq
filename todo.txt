@@ -1,18 +1,14 @@
+//Fix subscribe when SELECT is active for some reason
+
 // Inactive consumer before kill
 // consumer_inactive_destroy_hours: 1
 // LOGS 
 
 
-
-// When complete or fail a message , what if it moved when you send the key! ???
-// No need to use the status with the id , each stage knows what it needs <= fix this 
-
-
-
 Enhancements
-//Get Single Key populated 
+// Get Single Key populated 
 // use DB Subscribe to watch keys and changes
 // GODOCS, Command documentation
 
-//Docker build 
-GOOS=linux GOARCH=amd64 go build -o crimsonq
+//DockerComposer 
+
