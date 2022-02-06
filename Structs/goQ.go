@@ -61,6 +61,9 @@ func (goq *S_GOQ) StartWatchDog() {
 			case <-ticker.C:
 				for _, s := range goq.QDBPool {
 					s.ExpireQmsgFromStatus()
+					if time.Since(s.Last_Active_Pull) > (time.Hour * time.Duration(viper.GetInt("crimson_settings.consumer_inactive_destroy_hours"))) {
+						goq.DestroyQDB(s.QdbId)
+					}
 				}
 
 			}
