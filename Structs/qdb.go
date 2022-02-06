@@ -8,9 +8,9 @@ import (
 	"log"
 	"strings"
 	"time"
-	"ywadi/goq/DButils"
-	"ywadi/goq/Defs"
-	"ywadi/goq/Utils"
+	"ywadi/crimsonq/DButils"
+	"ywadi/crimsonq/Defs"
+	"ywadi/crimsonq/Utils"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/spf13/viper"

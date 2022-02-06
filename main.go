@@ -1,9 +1,9 @@
 package main
 
 import (
-	"ywadi/goq/RedconQ"
-	"ywadi/goq/Structs"
-	viperq "ywadi/goq/viperQ"
+	"ywadi/crimsonq/RedconQ"
+	"ywadi/crimsonq/Structs"
+	viperq "ywadi/crimsonq/viperQ"
 
 	"github.com/spf13/viper"
 )

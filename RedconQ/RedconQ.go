@@ -5,9 +5,9 @@ import (
 	"log"
 	"strings"
 	"time"
-	"ywadi/goq/Defs"
-	"ywadi/goq/Structs"
-	"ywadi/goq/Utils"
+	"ywadi/crimsonq/Defs"
+	"ywadi/crimsonq/Structs"
+	"ywadi/crimsonq/Utils"
 
 	"github.com/spf13/viper"
 	"github.com/tidwall/redcon"

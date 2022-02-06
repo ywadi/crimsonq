@@ -2,8 +2,8 @@ package Structs
 
 import (
 	"time"
-	"ywadi/goq/Defs"
-	"ywadi/goq/Utils"
+	"ywadi/crimsonq/Defs"
+	"ywadi/crimsonq/Utils"
 )
 
 type S_QMSG struct {

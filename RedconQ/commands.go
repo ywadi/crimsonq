@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"ywadi/goq/Defs"
+	"ywadi/crimsonq/Defs"
 
 	"github.com/spf13/viper"
 	"github.com/tidwall/redcon"

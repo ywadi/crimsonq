@@ -3,8 +3,8 @@ package DButils
 import (
 	"log"
 	"os"
-	"ywadi/goq/Defs"
-	"ywadi/goq/Utils"
+	"ywadi/crimsonq/Defs"
+	"ywadi/crimsonq/Utils"
 
 	badger "github.com/dgraph-io/badger/v3"
 	"github.com/spf13/viper"

@@ -1,4 +1,4 @@
-module ywadi/goq
+module ywadi/crimsonq
 
 go 1.16
 
