@@ -246,8 +246,8 @@ func Msg_Get_Status_Json(con redcon.Conn, args ...[][]byte) error {
 func Msg_Fail(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	messageId := string(args[0][1])
+	errMsg := string(args[0][2])
 	fmt.Println(messageId)
-	errMsg := string(args[0][1])
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.MsgFail(consumerId, messageId, errMsg)
 		if err != nil {

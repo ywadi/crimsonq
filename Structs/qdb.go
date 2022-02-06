@@ -74,7 +74,7 @@ func (qdb *S_QDB) CreateDB() {
 	qdb.SetDB(db)
 }
 
-func (qdb *S_QDB) MoveMsg(key string, from string, to string, err string) (*S_QMSG, error) {
+func (qdb *S_QDB) MoveMsg(key string, from string, to string, errMsg string) (*S_QMSG, error) {
 	key = from + ":" + key
 	value, er := DButils.GET(qdb.DB(), key)
 	if er != nil {
@@ -86,8 +86,8 @@ func (qdb *S_QDB) MoveMsg(key string, from string, to string, err string) (*S_QM
 		qmsg.StatusHistory[to+"_at"] = time.Now()
 		qmsg.Status = to
 		qmsg.Key = to + ":" + qmsg.RawKey
-		if err != "" {
-			qmsg.Error = err
+		if errMsg != "" {
+			qmsg.Error = errMsg
 		}
 		newKey := strings.Replace(key, from, to, 1)
 		DButils.DEL(qdb.DB(), key)
@@ -178,23 +178,20 @@ func (qdb *S_QDB) MarkCompleted(key string) error {
 	if err1 == nil {
 		return nil
 	}
-	_, err2 := qdb.MoveMsg(key, Defs.STATUS_PENDING, Defs.STATUS_COMPLETED, "")
+	_, err2 := qdb.MoveMsg(key, Defs.STATUS_DELAYED, Defs.STATUS_COMPLETED, "")
 	if err2 == nil {
 		return nil
 	}
 	return errors.New(err1.Error() + "::" + err2.Error())
 }
 func (qdb *S_QDB) MarkFailed(key string, errMsg string) error {
-
-	qmsg, err1 := qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_FAILED, "")
+	_, err1 := qdb.MoveMsg(key, Defs.STATUS_ACTIVE, Defs.STATUS_FAILED, errMsg)
 	if err1 == nil {
-		qmsg.Error = errMsg
 		return nil
 	}
 
-	qmsg, err2 := qdb.MoveMsg(key, Defs.STATUS_PENDING, Defs.STATUS_FAILED, "")
+	_, err2 := qdb.MoveMsg(key, Defs.STATUS_PENDING, Defs.STATUS_FAILED, errMsg)
 	if err2 == nil {
-		qmsg.Error = errMsg
 		return nil
 	}
 
