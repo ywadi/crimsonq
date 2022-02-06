@@ -35,12 +35,17 @@ You can find more on how mqtt topic matching works in the [link here](https://ww
 ## Deploying CrimsonQ 
 You have 2 options, you either build it with Go or Build a docker image all ready to go. 
 ### Building and using Docker 
+TODO
 
 ### Building Manually with GO 
+TODO
 
 ## CrimsonQ Settings 
+TODO
 
 ## CrimsonQ connecting and controlling 
+TODO
 
 ## Building a Client Library 
+TODO
 
