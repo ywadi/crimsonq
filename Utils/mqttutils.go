@@ -1,13 +1,10 @@
 package Utils
 
 import (
-	"fmt"
 	"strings"
 )
 
 func match(route []string, topic []string) bool {
-	fmt.Println(route, topic)
-
 	if len(route) == 0 {
 		return len(topic) == 0
 	}
@@ -21,7 +18,6 @@ func match(route []string, topic []string) bool {
 	}
 
 	if (route[0] == "+") || (route[0] == topic[0]) {
-		fmt.Println(route[0], topic[0], route[0] == topic[0])
 		return match(route[1:], topic[1:])
 	}
 	return false

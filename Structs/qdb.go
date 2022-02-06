@@ -85,7 +85,6 @@ func (qdb *S_QDB) MoveMsg(key string, from string, to string, err string) (*S_QM
 	}
 	var qmsg S_QMSG
 	if !bytes.Equal(value, []byte{}) {
-		print("!!!!", "[", value, "]", bytes.Equal(value, []byte{}))
 		qmsg.Deserialize(value)
 		qmsg.StatusHistory[to+"_at"] = time.Now()
 		qmsg.Status = to
@@ -123,7 +122,8 @@ func (qdb *S_QDB) MoveBatchOlderThan(from string, to string, duration time.Durat
 				var cQmsg S_QMSG
 				cQmsg.Deserialize(valCopy)
 				if time.Since(cQmsg.StatusHistory[from+"_at"]) > duration {
-					qdb.MoveMsg(string(item.Key()), from, to, "Job took too long to execute")
+					rawKey := strings.Split(string(item.Key()), ":")
+					qdb.MoveMsg(rawKey[1], from, to, "Job took too long to execute")
 					fmt.Println("Moved", string(item.Key()), "from:", from, "to:", to, "duration:", time.Since(cQmsg.StatusHistory[from+"_at"]))
 				}
 				return nil
@@ -148,6 +148,9 @@ func (qdb *S_QDB) Pull() (*S_QMSG, error) {
 		return nil, err
 	}
 	keySplit := strings.Split(string(k), ":")
+	if len(keySplit) < 2 {
+		return nil, errors.New("empty queue")
+	}
 	msgRes, err := qdb.MoveMsg(keySplit[1], Defs.STATUS_PENDING, Defs.STATUS_ACTIVE, "")
 	if err != nil {
 		return nil, err

@@ -27,7 +27,6 @@ func Quit(con redcon.Conn, args ...[][]byte) error {
 }
 
 func Auth(con redcon.Conn, args ...[][]byte) error {
-	fmt.Println(">>>", con)
 	if string(args[0][0]) == viper.GetString("crimson_settings.password") {
 		cntxt := con.Context().(ConnContext)
 		cntxt.Auth = true
@@ -377,7 +376,6 @@ func execCommand(conn redcon.Conn, cmd redcon.Command) {
 		for _, x := range cmd.Args {
 			fmt.Print(string(x), " ")
 		}
-		fmt.Println()
 		if conn.Context().(ConnContext).Auth || cCmd == "auth" {
 			if val, ok := Commands[cCmd]; ok {
 
