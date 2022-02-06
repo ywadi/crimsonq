@@ -1,9 +1,8 @@
-// Inactive consumer before kill
-// consumer_inactive_destroy_hours: 1
-// LOGS FIX
+// LOGS FIX + DB logs 
 // DockerComposer 
-// TLS
+//Error on fail not being passed 
+//Subscribe remove status from the message being sent for single 
 
 Enhancements
 // Get Single Key populated 
-// use DB Subscribe to watch keys and changes / move to a file better ? 
+// TLS //Optional
