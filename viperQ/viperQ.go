@@ -3,6 +3,7 @@ package viperq
 import (
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -10,11 +11,10 @@ func Init() {
 	viper.SetConfigName("crimson.config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath("$HOME/.crimsonQ")
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
-		panic(fmt.Errorf("Fatal error config file: %w \n", err))
+		log.Fatal(fmt.Errorf("fatal error config file: %w \n", err))
 	}
-	fmt.Println("Settings loaded...")
-	fmt.Println(viper.AllKeys(), ", loaded from settings file ", viper.ConfigFileUsed())
+	log.Info("Settings loaded...")
+	log.WithField("settings", viper.GetStringMap("crimson_settings")).Info("Loaded settings")
 }

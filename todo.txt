@@ -1,7 +1,6 @@
-// LOGS FIX + DB logs 
-// DockerComposer 
-// Error on fail not being passed 
-
+TODOs
+Setup logrotate(8) for docker container
 Enhancements
-// Get Single Key populated 
-// TLS //Optional
+[] More into logs
+[] Get Single Key populated 
+[] TLS Support for RESP as optional

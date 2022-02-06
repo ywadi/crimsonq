@@ -3,11 +3,12 @@ package RedconQ
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
 	"ywadi/crimsonq/Defs"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/viper"
 	"github.com/tidwall/redcon"
@@ -247,7 +248,6 @@ func Msg_Fail(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	messageId := string(args[0][1])
 	errMsg := string(args[0][2])
-	fmt.Println(messageId)
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.MsgFail(consumerId, messageId, errMsg)
 		if err != nil {
@@ -385,7 +385,8 @@ func execCommand(conn redcon.Conn, cmd redcon.Command) {
 		for _, x := range cmd.Args {
 			cmdString = cmdString + " " + string(x)
 		}
-		log.Println(" | " + conn.RemoteAddr() + " | executed:" + cmdString)
+
+		log.WithFields(log.Fields{"addr": conn.RemoteAddr(), "cmd": cmdString}).Info("command executed")
 
 		if conn.Context().(ConnContext).Auth || cCmd == "auth" {
 			if val, ok := Commands[cCmd]; ok {

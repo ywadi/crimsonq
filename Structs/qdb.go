@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log"
 	"strings"
 	"time"
 	"ywadi/crimsonq/DButils"
 	"ywadi/crimsonq/Defs"
 	"ywadi/crimsonq/Utils"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/spf13/viper"
@@ -121,7 +121,7 @@ func (qdb *S_QDB) MoveBatchOlderThan(from string, to string, duration time.Durat
 				if time.Since(cQmsg.StatusHistory[from+"_at"]) > duration {
 					rawKey := strings.Split(string(item.Key()), ":")
 					qdb.MoveMsg(rawKey[1], from, to, "Job took too long to execute")
-					fmt.Println("Moved", string(item.Key()), "from:", from, "to:", to, "duration:", time.Since(cQmsg.StatusHistory[from+"_at"]))
+					log.Info("Moved", string(item.Key()), "from:", from, "to:", to, "duration:", time.Since(cQmsg.StatusHistory[from+"_at"]))
 				}
 				return nil
 			})

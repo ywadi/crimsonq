@@ -2,12 +2,13 @@ package RedconQ
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"time"
 	"ywadi/crimsonq/Defs"
 	"ywadi/crimsonq/Structs"
 	"ywadi/crimsonq/Utils"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/viper"
 	"github.com/tidwall/redcon"
@@ -25,7 +26,7 @@ func StartRedCon(addr string, cq *Structs.S_GOQ) {
 	go cq.Init()
 	HeartBeat()
 	crimsonQ = cq
-	log.Printf("started server at %s", addr)
+	log.Info("started server at %s", addr)
 	err := redcon.ListenAndServe(addr,
 		execCommand,
 		func(conn redcon.Conn) bool {
@@ -53,7 +54,7 @@ func StartRedCon(addr string, cq *Structs.S_GOQ) {
 }
 
 func HeartBeat() {
-	println("Heartbeat Started...")
+	log.Info("Heartbeat Started...")
 	ticker := time.NewTicker(time.Duration(viper.GetInt64("crimson_settings.heartbeat_seconds")) * time.Second)
 	done := make(chan bool)
 	go func() {
@@ -63,10 +64,9 @@ func HeartBeat() {
 				return
 			case <-ticker.C:
 				for _, s := range crimsonQ.QDBPool {
-					fmt.Println("Heartbeat")
 					json, err := crimsonQ.GetAllByStatusJson(s.QdbId, Defs.STATUS_PENDING)
 					if err != nil {
-						fmt.Println("JSON ERROR")
+						log.WithFields(log.Fields{"ConsumerId": s.QdbId, "Status": Defs.STATUS_PENDING}).Error("JSON Parse error at heartbeart", err)
 					}
 					PS.Publish(s.QdbId, json)
 				}

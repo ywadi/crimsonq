@@ -2,14 +2,14 @@ package Structs
 
 import (
 	"errors"
-	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 	"ywadi/crimsonq/DButils"
 	"ywadi/crimsonq/Defs"
 	"ywadi/crimsonq/Utils"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/spf13/viper"
@@ -42,7 +42,6 @@ func (goq *S_GOQ) Init() {
 			qdb := S_QDB{}
 			qdb.Deserialize(s)
 			goq.QDBPool[qdb.QdbId] = &qdb
-			fmt.Println(qdb) //todo:remove
 		}
 		//wg.Done() //TODO: Command off channel
 	}()
@@ -50,7 +49,7 @@ func (goq *S_GOQ) Init() {
 }
 
 func (goq *S_GOQ) StartWatchDog() {
-	println("Watchdog Started...")
+	log.Info("Watch Dog Started")
 	ticker := time.NewTicker(time.Duration(viper.GetInt64("crimson_settings.watchdog_seconds")) * time.Second)
 	done := make(chan bool)
 	go func() {
@@ -72,7 +71,7 @@ func (goq *S_GOQ) StartWatchDog() {
 }
 
 func (goq *S_GOQ) StartDiskSyncTime() {
-	println("DiskSync Timer Started...")
+	log.Info("DiskSync Timer Started...")
 	if !viper.GetBool("crimson_settings.db_full_persist") {
 		ticker := time.NewTicker(time.Duration(viper.GetInt64("crimson_settings.disk_sync_seconds")) * time.Second)
 		done := make(chan bool)
@@ -83,7 +82,7 @@ func (goq *S_GOQ) StartDiskSyncTime() {
 					return
 				case <-ticker.C:
 					for _, s := range goq.QDBPool {
-						fmt.Println("Synced data to disk:" + s.QdbId)
+						log.WithFields(log.Fields{"ConsumerId": s.QdbId}).Info("Synced data to disk:" + s.QdbId)
 						s.DB().Sync()
 					}
 
@@ -175,7 +174,6 @@ func (goq *S_GOQ) Pull(consumerId string) (*S_QMSG, error) {
 
 	consumerQ := goq.QDBPool[consumerId]
 	goq.SetLastPullDate(consumerId)
-	fmt.Println(consumerQ)
 
 	qmg, err := consumerQ.Pull()
 	if err != nil {
