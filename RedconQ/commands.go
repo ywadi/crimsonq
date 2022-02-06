@@ -3,6 +3,7 @@ package RedconQ
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -62,6 +63,10 @@ func Exists(con redcon.Conn, args ...[][]byte) error {
 
 func Consumer_Create(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
+	if crimsonQ.ConsumerExists(consumerId) {
+		con.WriteError(Defs.ERROConsumerAlreadyExists)
+		return nil
+	}
 	consumerTopics := string(args[0][1])
 	crimsonQ.CreateQDB(consumerId, viper.GetString("crimson_settings.data_rootpath"))
 	crimsonQ.SetTopics(consumerId, consumerTopics)
@@ -373,9 +378,12 @@ func execCommand(conn redcon.Conn, cmd redcon.Command) {
 
 	go func() {
 		cCmd := strings.ToLower(string(cmd.Args[0]))
+		cmdString := ""
 		for _, x := range cmd.Args {
-			fmt.Print(string(x), " ")
+			cmdString = cmdString + " " + string(x)
 		}
+		log.Println(" | " + conn.RemoteAddr() + " | executed:" + cmdString)
+
 		if conn.Context().(ConnContext).Auth || cCmd == "auth" {
 			if val, ok := Commands[cCmd]; ok {
 

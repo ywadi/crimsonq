@@ -1,5 +1,3 @@
-//msg.retryall broken
-
 // Inactive consumer before kill
 // consumer_inactive_destroy_hours: 1
 // LOGS FIX
