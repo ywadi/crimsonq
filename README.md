@@ -1,5 +1,6 @@
 
 
+
 # CrimsonQ
 [![buddy pipeline](https://app.buddy.works/ywadi85/crimsonq/pipelines/pipeline/373325/badge.svg?token=463c4f343893f85c5056a16ba6da1379079553b6b7a950b7ba9d643591fcb0d2 "buddy pipeline")](https://app.buddy.works/ywadi85/crimsonq/pipelines/pipeline/373325)
 ## A Multi Consumer per Message Queue with persistence and Queue Stages.
@@ -75,6 +76,10 @@ The settings yaml is as follows
 ## CrimsonQ connecting and controlling 
 To connect to a CrimsonQ server all you need to do is use redis-cli or any other redis client. You can then pass the CrimsonQ commands through the redis client over RESP protocol and execute the commands. You can use those commands to also build your own client library.
 You can see the list of commands by connecting through the client and sending __command__ that will return the command list. The list is below in alphabetical order with explanations
+
+Connect to default settings after running the CrimsonQ server like this 
+
+    redis-cli -p 9001 -a crimsonQ!
 
 - auth [password] 
 Used to authenticate to the server
