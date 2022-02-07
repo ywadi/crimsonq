@@ -269,7 +269,6 @@ func (qdb *S_QDB) GetAllKeys() (keys []string, count map[string]uint16) {
 	db := qdb.DB()
 	b := DButils.GetAllPrefix(db, Defs.STATUS_ACTIVE)
 	msgKeyCounts[Defs.STATUS_ACTIVE] = 0
-	print(b)
 	for _, s := range b {
 		newMSG := S_QMSG{}
 		newMSG.Deserialize(s)

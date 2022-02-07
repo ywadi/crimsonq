@@ -192,6 +192,11 @@ func (goq *S_GOQ) Pull(consumerId string) (*S_QMSG, error) {
 	return qmg, nil
 }
 
+func (goq *S_GOQ) ConcurrencyOk(consumerId string) bool {
+	consumerQ := goq.QDBPool[consumerId]
+	return !consumerQ.ConcurrencyBOEActive()
+}
+
 //MarkMSGIDFailed
 func (goq *S_GOQ) MsgFail(consumerId string, msgKey string, errMsg string) error {
 	consumerQ := goq.QDBPool[consumerId]

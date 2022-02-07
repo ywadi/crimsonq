@@ -105,6 +105,18 @@ func SetConsumerTopics(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
+func ConsumerConcurrencyOk(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	if crimsonQ.ConsumerExists(consumerId) {
+		con.WriteString(strconv.FormatBool(crimsonQ.ConcurrencyOk(consumerId)))
+	} else {
+		err := errors.New(Defs.ERRincorrectConsumerId)
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
+	return nil
+}
+
 func GetConsumerTopics(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
@@ -388,6 +400,7 @@ func initCommands() {
 		"consumer.topics.get":      {Function: GetConsumerTopics, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 		"consumer.concurrency.set": {Function: Set_Concurrency, ArgsCmd: []string{"consumerId", "concurrency"}, RequiresConsumerId: true},
 		"msg.list.json":            {Function: Msg_Get_Status_Json, ArgsCmd: []string{"consumerId", "status"}, RequiresConsumerId: true},
+		"consumer.concurrency.ok":  {Function: ConsumerConcurrencyOk, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 	}
 }
 
