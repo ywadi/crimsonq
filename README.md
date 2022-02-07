@@ -127,7 +127,7 @@ Send a ping message and receive a pong with a message string concatenated to it.
 - quit []
 Disconnect and quit the RESP client 
 - subscribe [consumerId]
-Subscribe to a consumerId which receives either a string key of new messages added to the consumer's Q and receive a heartbeat with an array of all pending message ids that need action.
+Subscribe to a consumerId which receives either a string key of new messages added to the consumer's Q and receive a heartbeat with an array of all pending message ids that need action. DO NOT USE THE MESSAGE DATA FROM THE HEARTBEAT TO PROCESS, USE MSG.PULL, this is just made for a look ahead.
 
 ## Building a Client Library 
 TODO
