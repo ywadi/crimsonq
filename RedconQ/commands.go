@@ -365,6 +365,15 @@ func Flush_Failed(con redcon.Conn, args ...[][]byte) error {
 	}
 }
 
+func Info(con redcon.Conn, args ...[][]byte) error {
+	info := []string{"CrimsonQ Server", "A NextGen Message Queue!"}
+	con.WriteArray(len(info))
+	for _, x := range info {
+		con.WriteString(x)
+	}
+	return nil
+}
+
 var Commands map[string]RedConCmds
 
 type RedConCmds struct {
@@ -379,6 +388,7 @@ func initCommands() {
 		"quit":                     {Function: Quit, ArgsCmd: []string{}, RequiresConsumerId: false},
 		"auth":                     {Function: Auth, ArgsCmd: []string{"password"}, RequiresConsumerId: false},
 		"command":                  {Function: Command, ArgsCmd: []string{}, RequiresConsumerId: false},
+		"info":                     {Function: Info, ArgsCmd: []string{}, RequiresConsumerId: false},
 		"subscribe":                {Function: Subscribe, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
 		"consumer.exists":          {Function: Exists, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
 		"consumer.create":          {Function: Consumer_Create, ArgsCmd: []string{"consumerId", "topics", "concurrency"}, RequiresConsumerId: false},
@@ -416,7 +426,6 @@ func execCommand(conn redcon.Conn, cmd redcon.Command) {
 		}
 
 		log.WithFields(log.Fields{"addr": conn.RemoteAddr(), "cmd": cmdString}).Info("command executed")
-
 		if conn.Context().(ConnContext).Auth || cCmd == "auth" {
 			if val, ok := Commands[cCmd]; ok {
 
