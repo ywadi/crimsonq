@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 	"ywadi/crimsonq/DButils"
@@ -140,18 +139,19 @@ func (qdb *S_QDB) Push(qmsg S_QMSG) {
 	DButils.SET(qdb.DB(), qmsg.Key, qmsg.Serialize())
 }
 
-func (qdb *S_QDB) ConcurrencyLOEActive() bool {
+func (qdb *S_QDB) ConcurrencyBOEActive() bool {
 	db := qdb.DB()
 	b := DButils.GetAllPrefix(db, Defs.STATUS_ACTIVE)
-	fmt.Println(qdb.Concurrency >= len(b), qdb.Concurrency, len(b))
+	if qdb.Concurrency <= 0 {
+		return false
+	}
 	return qdb.Concurrency <= len(b)
 }
 
 func (qdb *S_QDB) Pull() (*S_QMSG, error) {
 	//Get message from Pending and add to Active
 	//Return message and then turn to JSON
-	fmt.Println("Equation", qdb.ConcurrencyLOEActive())
-	if qdb.ConcurrencyLOEActive() {
+	if qdb.ConcurrencyBOEActive() {
 		return nil, errors.New(Defs.ERRExceededConcurrency)
 	}
 	k, _, err := DButils.DEQ(qdb.DB())

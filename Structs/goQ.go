@@ -2,7 +2,6 @@ package Structs
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -186,7 +185,6 @@ func (goq *S_GOQ) PushTopic(topic string, message string) map[string]string {
 func (goq *S_GOQ) Pull(consumerId string) (*S_QMSG, error) {
 	consumerQ := goq.QDBPool[consumerId]
 	goq.SetLastPullDate(consumerId)
-	fmt.Println(consumerQ.Concurrency, consumerQ.Last_Active_Pull)
 	qmg, err := consumerQ.Pull()
 	if err != nil {
 		return nil, err
