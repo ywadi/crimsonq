@@ -64,11 +64,11 @@ func HeartBeat() {
 				return
 			case <-ticker.C:
 				for _, s := range crimsonQ.QDBPool {
-					json, err := crimsonQ.GetAllByStatusJson(s.QdbId, Defs.STATUS_PENDING)
+					count, err := crimsonQ.GetKeyCount(s.QdbId)
 					if err != nil {
 						log.WithFields(log.Fields{"ConsumerId": s.QdbId, "Status": Defs.STATUS_PENDING}).Error("JSON Parse error at heartbeart", err)
 					}
-					PS.Publish(s.QdbId, json)
+					PS.Publish(s.QdbId, "pendingCount:"+fmt.Sprint(count[Defs.STATUS_PENDING]))
 				}
 			}
 		}
