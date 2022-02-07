@@ -1,5 +1,5 @@
 Update README for Concurrency
-
+Update README for Heart beat not json but "pendingCount:4"
 
 TODOs
 Setup logrotate(8) for docker container
