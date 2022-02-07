@@ -2,6 +2,8 @@ package Structs
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -113,6 +115,17 @@ func (goq *S_GOQ) SetTopics(consumerId string, topics string) {
 	goq.UpdateQDBinDB(consumerId)
 }
 
+func (goq *S_GOQ) SetConcurrency(consumerId string, concurrency string) {
+	concurrencyInt, err := strconv.Atoi(concurrency)
+	if err != nil {
+		// handle error
+		log.Error("ERROR parsing to int")
+	}
+	consumerQ := goq.QDBPool[consumerId]
+	consumerQ.Concurrency = concurrencyInt
+	goq.UpdateQDBinDB(consumerId)
+}
+
 func (goq *S_GOQ) SetLastPullDate(consumerId string) {
 	consumerQ := goq.QDBPool[consumerId]
 	consumerQ.Last_Active_Pull = time.Now()
@@ -171,10 +184,9 @@ func (goq *S_GOQ) PushTopic(topic string, message string) map[string]string {
 
 //Pull from consumer
 func (goq *S_GOQ) Pull(consumerId string) (*S_QMSG, error) {
-
 	consumerQ := goq.QDBPool[consumerId]
 	goq.SetLastPullDate(consumerId)
-
+	fmt.Println(consumerQ.Concurrency, consumerQ.Last_Active_Pull)
 	qmg, err := consumerQ.Pull()
 	if err != nil {
 		return nil, err

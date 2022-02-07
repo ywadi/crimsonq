@@ -69,9 +69,25 @@ func Consumer_Create(con redcon.Conn, args ...[][]byte) error {
 		return nil
 	}
 	consumerTopics := string(args[0][1])
+	consumerConcurrent := string(args[0][2])
 	crimsonQ.CreateQDB(consumerId, viper.GetString("crimson_settings.data_rootpath"))
+	crimsonQ.SetConcurrency(consumerId, consumerConcurrent)
 	crimsonQ.SetTopics(consumerId, consumerTopics)
 	con.WriteString("Created:" + consumerId)
+	return nil
+}
+
+func Set_Concurrency(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	concurrency := string(args[0][1])
+	if crimsonQ.ConsumerExists(consumerId) {
+		crimsonQ.SetConcurrency(consumerId, concurrency)
+		con.WriteString("ok")
+	} else {
+		err := errors.New(Defs.ERRincorrectConsumerId)
+		con.WriteError(fmt.Sprint(err))
+		return err
+	}
 	return nil
 }
 
@@ -186,9 +202,8 @@ func Msg_Pull(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
 		msg, err := crimsonQ.Pull(consumerId)
-		crimsonQ.SetLastPullDate(consumerId)
 		if err != nil {
-			con.WriteNull()
+			con.WriteError(err.Error())
 			return err
 		}
 		con.WriteString(msg.JsonStringify())
@@ -348,30 +363,31 @@ type RedConCmds struct {
 
 func initCommands() {
 	Commands = map[string]RedConCmds{
-		"ping":                    {Function: Ping, ArgsCmd: []string{"messageString"}, RequiresConsumerId: false},
-		"quit":                    {Function: Quit, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"auth":                    {Function: Auth, ArgsCmd: []string{"password"}, RequiresConsumerId: false},
-		"command":                 {Function: Command, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"subscribe":               {Function: Subscribe, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"consumer.exists":         {Function: Exists, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
-		"consumer.create":         {Function: Consumer_Create, ArgsCmd: []string{"consumerId", "topics"}, RequiresConsumerId: false},
-		"consumer.destroy":        {Function: Destroy, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"consumer.list":           {Function: List, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"msg.keys":                {Function: Msg_Keys, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg.counts":              {Function: Msg_Counts, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg.push.topic":          {Function: Msg_Push_Topic, ArgsCmd: []string{"topicString", "messageString"}, RequiresConsumerId: false},
-		"msg.push.consumer":       {Function: Msg_Push_Consumer, ArgsCmd: []string{"consumerId", "messageString"}, RequiresConsumerId: true},
-		"msg.pull":                {Function: Msg_Pull, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg.del":                 {Function: Msg_Del, ArgsCmd: []string{"consumerId", "status", "messageId"}, RequiresConsumerId: true},
-		"msg.fail":                {Function: Msg_Fail, ArgsCmd: []string{"consumerId", "messageId", "errMsg"}, RequiresConsumerId: true},
-		"msg.complete":            {Function: Msg_Complete, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
-		"msg.retry":               {Function: Msg_Retry, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
-		"msg.retryall":            {Function: Msg_Retry_All, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"consumer.flush.complete": {Function: Flush_Complete, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"consumer.flush.failed":   {Function: Flush_Failed, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"consumer.topics.set":     {Function: SetConsumerTopics, ArgsCmd: []string{"consumerId", "topics"}, RequiresConsumerId: true},
-		"consumer.topics.get":     {Function: GetConsumerTopics, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg.list.json":           {Function: Msg_Get_Status_Json, ArgsCmd: []string{"consumerId", "status"}, RequiresConsumerId: true},
+		"ping":                     {Function: Ping, ArgsCmd: []string{"messageString"}, RequiresConsumerId: false},
+		"quit":                     {Function: Quit, ArgsCmd: []string{}, RequiresConsumerId: false},
+		"auth":                     {Function: Auth, ArgsCmd: []string{"password"}, RequiresConsumerId: false},
+		"command":                  {Function: Command, ArgsCmd: []string{}, RequiresConsumerId: false},
+		"subscribe":                {Function: Subscribe, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"consumer.exists":          {Function: Exists, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
+		"consumer.create":          {Function: Consumer_Create, ArgsCmd: []string{"consumerId", "topics", "concurrency"}, RequiresConsumerId: false},
+		"consumer.destroy":         {Function: Destroy, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"consumer.list":            {Function: List, ArgsCmd: []string{}, RequiresConsumerId: false},
+		"msg.keys":                 {Function: Msg_Keys, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"msg.counts":               {Function: Msg_Counts, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"msg.push.topic":           {Function: Msg_Push_Topic, ArgsCmd: []string{"topicString", "messageString"}, RequiresConsumerId: false},
+		"msg.push.consumer":        {Function: Msg_Push_Consumer, ArgsCmd: []string{"consumerId", "messageString"}, RequiresConsumerId: true},
+		"msg.pull":                 {Function: Msg_Pull, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"msg.del":                  {Function: Msg_Del, ArgsCmd: []string{"consumerId", "status", "messageId"}, RequiresConsumerId: true},
+		"msg.fail":                 {Function: Msg_Fail, ArgsCmd: []string{"consumerId", "messageId", "errMsg"}, RequiresConsumerId: true},
+		"msg.complete":             {Function: Msg_Complete, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
+		"msg.retry":                {Function: Msg_Retry, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
+		"msg.retryall":             {Function: Msg_Retry_All, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"consumer.flush.complete":  {Function: Flush_Complete, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"consumer.flush.failed":    {Function: Flush_Failed, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"consumer.topics.set":      {Function: SetConsumerTopics, ArgsCmd: []string{"consumerId", "topics"}, RequiresConsumerId: true},
+		"consumer.topics.get":      {Function: GetConsumerTopics, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
+		"consumer.concurrency.set": {Function: Set_Concurrency, ArgsCmd: []string{"consumerId", "concurrency"}, RequiresConsumerId: true},
+		"msg.list.json":            {Function: Msg_Get_Status_Json, ArgsCmd: []string{"consumerId", "status"}, RequiresConsumerId: true},
 	}
 }
 

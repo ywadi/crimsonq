@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 	"ywadi/crimsonq/DButils"
@@ -21,6 +22,7 @@ type S_QDB struct {
 	QdbPath          string
 	QdbTopicFilters  []string
 	Last_Active_Pull time.Time
+	Concurrency      int
 }
 
 var DBpool map[string]*badger.DB
@@ -137,9 +139,21 @@ func (qdb *S_QDB) Push(qmsg S_QMSG) {
 	//Push message to pending
 	DButils.SET(qdb.DB(), qmsg.Key, qmsg.Serialize())
 }
+
+func (qdb *S_QDB) ConcurrencyLOEActive() bool {
+	db := qdb.DB()
+	b := DButils.GetAllPrefix(db, Defs.STATUS_ACTIVE)
+	fmt.Println(qdb.Concurrency >= len(b), qdb.Concurrency, len(b))
+	return qdb.Concurrency <= len(b)
+}
+
 func (qdb *S_QDB) Pull() (*S_QMSG, error) {
 	//Get message from Pending and add to Active
 	//Return message and then turn to JSON
+	fmt.Println("Equation", qdb.ConcurrencyLOEActive())
+	if qdb.ConcurrencyLOEActive() {
+		return nil, errors.New(Defs.ERRExceededConcurrency)
+	}
 	k, _, err := DButils.DEQ(qdb.DB())
 	if err != nil {
 		return nil, err

@@ -25,4 +25,5 @@ const (
 	ERRnoDataReturn           string = "002:no_data_returned"
 	ERRIncorrectStatus        string = "003:incorrect_status"
 	ERROConsumerAlreadyExists string = "004:consumer_exists"
+	ERRExceededConcurrency    string = "005:pull_exceeded_concurrency"
 )
