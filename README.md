@@ -11,8 +11,7 @@
 ## A Multi Consumer per Message Queue with persistence and Queue Stages.
 ![crimsonq](https://github.com/ywadi/crimsonq/raw/main/assets/logo.png)
 
- __Early Release: v0.6__
- __Currently functional and usable, actively being developed further__a
+ __Currently functional and usable, actively being developed further__
  
 Crimson Queue allows you to have multiple consumers listening on topics and receive a copy of a message that targets its topic. It provides multiple consumers with a message queue and complex message routing. Utilizes the same methodology as MQTT topic routing but with queue stages and persistence per consumer. This is under active development. It is being developed in Go and utilizes [BadgerDB](https://github.com/dgraph-io/badger) as the internal database layer to provide top notch performance, persistence and durability. It supports Redis RESP protocol through [RedCon](https://github.com/tidwall/redcon), allowing any Redis library the ability to connect to it and communicate with it also keeping the performance at, also can be utilized from redis-cli. 
 Currently the official client library is being developed for Node.Js on top of node-redis. You can easily develop a client utilizing your redis client of choice on any language you like. Share it with us and we will make sure we get it out there to the community. 
