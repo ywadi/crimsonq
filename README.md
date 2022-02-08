@@ -1,13 +1,14 @@
 
 
 
+
 # CrimsonQ
 [![buddy pipeline](https://app.buddy.works/ywadi85/crimsonq/pipelines/pipeline/373325/badge.svg?token=463c4f343893f85c5056a16ba6da1379079553b6b7a950b7ba9d643591fcb0d2 "buddy pipeline")](https://app.buddy.works/ywadi85/crimsonq/pipelines/pipeline/373325)
 ## A Multi Consumer per Message Queue with persistence and Queue Stages.
 ![crimsonq](https://github.com/ywadi/crimsonq/raw/main/assets/logo.png)
 
  __Early Release: v0.6__
- __Currently functional and usable, actively being developed further__
+ __Currently functional and usable, actively being developed further__a
  
 Crimson Queue allows you to have multiple consumers listening on topics and receive a copy of a message that targets its topic. It provides multiple consumers with a message queue and complex message routing. Utilizes the same methodology as MQTT topic routing but with queue stages and persistence per consumer. This is under active development. It is being developed in Go and utilizes [BadgerDB](https://github.com/dgraph-io/badger) as the internal database layer to provide top notch performance, persistence and durability. It supports Redis RESP protocol through [RedCon](https://github.com/tidwall/redcon), allowing any Redis library the ability to connect to it and communicate with it also keeping the performance at, also can be utilized from redis-cli. 
 Currently the official client library is being developed for Node.Js on top of node-redis. You can easily develop a client utilizing your redis client of choice on any language you like. Share it with us and we will make sure we get it out there to the community. 
@@ -73,6 +74,7 @@ The settings yaml is as follows
       consumer_inactive_destroy_hours: 48 //How many hours of no consumer msg.pull command before destroying consumer queue 
       log_file: /CrimsonQ/.crimsonQ/logs //The file with the log information 
 
+
 ## CrimsonQ connecting and controlling 
 To connect to a CrimsonQ server all you need to do is use redis-cli or any other redis client. You can then pass the CrimsonQ commands through the redis client over RESP protocol and execute the commands. You can use those commands to also build your own client library.
 You can see the list of commands by connecting through the client and sending __command__ that will return the command list. The list is below in alphabetical order with explanations
@@ -81,58 +83,168 @@ Connect to default settings after running the CrimsonQ server like this
 
     redis-cli -p 9001 -a crimsonQ!
 
-- auth [password] 
-Used to authenticate to the server
-- command []
-Retrives a list of commands similar to this
-- consumer.create [consumerId] [topics]
-Create a new consumer queue, takes a unique id and an mqtt like topic list to recieve messages on 
 
->     consumer.create myAwesomeConsumer myTopic/Path/Here,myTopic/SecondPath/Here
+<table border="1" cellpadding="1" cellspacing="1" style="width:500px;">
+	<tbody>
+		<tr>
+			<td><b>Command</b></td>
+			<td><b>Arguments<b/></td>
+			<td><b>Return<b/></td>
+			<td><b>Notes<b/></td>
+		</tr>
+		<tr>
+			<td>AUTH</td>
+			<td><i>password [string]</i></td>
+			<td> </td>
+			<td>&nbsp;</td>
+		</tr>
+		<tr>
+			<td>COMMAND</td>
+			<td><i>no arguments</i></td>
+			<td>[String Array] of commands and argumetns in the format ["cmd_name [arg1] [arg2] [arg3]"] </td>
+			<td>&nbsp;</td>
+		</tr>
+		<tr>
+			<td>CONSUMER.CREATE</td>
+			<td><ol><li>consumerId [string]</li><li>topics [string]</li><li>concurrency [int]</li></ol></td>
+			<td></td>
+			<td>Topics are passed over as a string with comma separated. eg: "/path1/p2,/topic1/t2" <br/> </td>
+		</tr> 
+		<tr>
+			<td>CONSUMER.DESTROY</td>
+			<td>consumerId [string]</td>
+			<td></td>
+			<td>Destroies the consumer and all the data.</td>
+		</tr>
+		<tr>
+			<td>CONSUMER.EXISTS</td>
+			<td>consumerId [string]</td>
+			<td>string "true" or "false"</td>
+			<td>Checks if consumer exists or not.</td>
+		</tr>
+		<tr>
+			<td>CONSUMER.FLUSH.COMPLETE</td>
+			<td>consumerId [string]</td>
+			<td></td>
+			<td>Deletes all failed messages for consumerId</td>
+		</tr>
+		<tr>
+			<td>CONSUMER.FLUSH.COMPLETE</td>
+			<td>consumerId [string]</td>
+			<td></td>
+			<td>Deletes all complete messages for consumerId</td>
+		</tr>
+		<tr>
+			<td>CONSUMER.LIST</td>
+			<td></td>
+			<td>[String Array] of all consumers</td>
+			<td>Returns a list of all the consumers that have queues. </td>
+		</tr>
+		<tr>
+			<td>CONSUMER.TOPICS.GET</td>
+			<td>consumerId [string]</td>
+			<td>[String Array]</td>
+			<td>Returns a list of topics that a consumer is subscribed to get messages from. </td>
+		</tr>
+		<tr>
+			<td>CONSUMER.TOPICS.SET</td>
+			<td><ol><li>consumerId [string]</li><li>topics [string]: comma separate in string</li></ol></td>
+			<td></td>
+			<td>Sets the list of topics that a consumer is subscribed to get messages on. </td>
+		</tr>
+		<tr>
+			<td>MSG.COMPLETE</td>
+			<td><ol><li>consumerId [string]</li><li>messageKey[string]</li></ol></td>
+			<td>[String Array]</td>
+			<td>Returns a list of topics that a consumer is subscribed to get messages from. </td>
+		</tr>
+		<tr>
+			<td>MSG.COUNTS</td>
+			<td>consumerId [string]</td>
+			<td>[String Array] of message counts grouped by status</td>
+			<td>The returned array has strings with counts in format ["<b>status:10</b>"]</td>
+		</tr>
+		<tr>
+			<td>MSG.DEL</td>
+			<td><ol><li>consumerId [string]</li><li>status [string]</li><li>messageKey[string]</li></ol></td>
+			<td></td>
+			<td>Deletes a message from a consumer queue based on its status and key</td>
+		</tr>
+		<tr>
+			<td>MSG.FAIL</td>
+			<td><ol><li>consumerId [string]</li><li>messageKey[string]</li><li>error[string]</li></ol></td>
+			<td></td>
+			<td>Mark and active or delayed message as failed, and will move it to failed status. An error message can be sent and stored in the message for refference.</td>
+		</tr>
+		<tr>
+			<td>MSG.KEYS</td>
+			<td>consumerId [string]</td>
+			<td>[String Array] [<b>Status:MessageKey]</b></td>
+			<td>Returns a list of all Messages with status and keys</td>
+		</tr>
+		<tr>
+			<td>MSG.LIST.JSON</td>
+			<td><ol><li>consumerId [string]</li><li>status[string]</li></ol></td>
+			<td>[JSON ] : Messages</td>
+			<td>Returns a JSON will all messages and information for a status</td>
+		</tr>
+		<tr>
+			<td>MSG.PULL</td>
+			<td>consumerId [string]</td>
+			<td>[JSON]: Message</td>
+			<td>Pulls a new message from the queue in JSON. <i>You should then call msg.fail or msg.complete after the pull, if it takes too long to process it will move to delayed, then failed automatically</i></td>
+		</tr>
+		<tr>
+			<td>MSG.PUSH.CONSUMER</td>
+			<td><ol><li>consumerId [string]</li><li>messagePayload [string]</li></ol></td>
+			<td></td>
+			<td>Push a message to a single consumer by its consumerId. The payload will be in string format.</td>
+		</tr>
+		<tr>
+			<td>MSG.PUSH.TOPIC</td>
+			<td><ol><li>topic [string]</li><li>messagePayload [string]</li></ol></td>
+			<td></td>
+			<td>Pushes the message to all consumers that subscribe to a topic match. <i>See MQTT Topic Matching. </i></td>
+		</tr>
+		<tr>
+			<td>MSG.RETRY</td>
+			<td><ol><li>consumerId [string]</li><li>messageKey [string]</li></ol></td>
+			<td></td>
+			<td>Re-Queue a message that failed, placing it on top of the queue to be re-pulled.</td>
+		</tr>
+		<tr>
+			<td>MSG.RETRYALL</td>
+			<td>consumerId [string]</td>
+			<td></td>
+			<td>Re-Queue all the failed messages, putting them back on top of queue</td>
+		</tr>
+		<tr>
+			<td>PING</td>
+			<td>message[string]</td>
+			<td>[String] "Pong! {message}" </td>
+			<td></td>
+		</tr>
+		<tr>
+			<td>Quit</td>
+			<td></td>
+			<td></td>
+			<td>Connection to the server is gracefully dropped.</td>
+		</tr>
+		<tr>
+			<td>INFO</td>
+			<td></td>
+			<td></td>
+			<td>Returns server information</td>
+		</tr>
+		<tr>
+			<td>CONSUMER.CONCURRENCYOK</td>
+			<td>consumerId [string]</td>
+			<td></td>
+			<td>Checks if the number of active messages are still less than the concurrency threshold provided to the consumer.</td>
+		</tr>
+	</tbody>
+</table>
 
-- consumer.destroy [consumerId]
-Destroys a consumer by its consumerId 
-
-- consumer.exists [consumerId]
-Checks if a consumer exists, this is useful to check before creating
-- consumer.flush.complete [consumerId]
-Deletes all messages for a consumer that are in the complete status 
-- consumer.flush.failed [consumerId]
-Deletes all messages for a consumer that are in the failed status
-- consumer.list []
-Gets a list of all consumer queues 
-- consumer.topics.get [consumerId]
-Gets the topics that a consumer is listening on 
-- consumer.topics.set [consumerId] [topics]
-Sets topics for a consumer to listen on, overrides previous 
-- msg.complete [consumerId] [messageId]
-Mark a msg as complete, the msg can only be complete if it is either active or pending 
-- msg.counts [consumerId]
-Get a message count grouped by status for a consumer 
-- msg.del [consumerId] [status] [messageId]
-Delete a message for a consumer by messageId
-- msg.fail [consumerId] [messageId] [errMsg]
-Send an active or delayed message to a fail status 
-- msg.keys [consumerId]
-Get all the message keys for a consumerId, the keys will be prefixed with status
-- msg.list.json [consumerId] [status]
-Get a list of all messages & details for a consumerId in a given status (ie: pending, active, delayed, completed, failed) in json 
-- msg.pull [consumerId]
-Pull a message from pending and send it to active, returns the key of the message 
-- msg.push.consumer [consumerId] [messageString
-Push a message to a consumer directly by its consumer id ex: msg.push.consumer myAwesomeQ "my message text"
-- msg.push.topic [topicString] [messageString]
-Push a message copy to multiple consumers based on if they match the topic its being sent to. 
-- msg.retry [consumerId] [messageId]
-Retry a failed message for a consumerId based on its messageId
-- msg.retryall [consumerId]
-Retry all failed messages for a consumerId
-- ping [messageString]
-Send a ping message and receive a pong with a message string concatenated to it.
-- quit []
-Disconnect and quit the RESP client 
-- subscribe [consumerId]
-Subscribe to a consumerId which receives either a string key of new messages added to the consumer's Q and receive a heartbeat with an array of all pending message ids that need action. DO NOT USE THE MESSAGE DATA FROM THE HEARTBEAT TO PROCESS, USE MSG.PULL, this is just made for a look ahead.
 
 ## Building a Client Library 
 TODO
