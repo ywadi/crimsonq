@@ -258,7 +258,13 @@ The writes done on CrimsonQ using redis-bencmark to write into queues is highly 
 
 ## Building a Client Library 
 *TODO*
-While we get this section ready, check [The Nodejs Client Library](https://github.com/ywadi/crimsonqClient)
+### List of Client Libraries 
+
+|Platform|Link|Authors|
+|--|--|--|
+|Node.js|[crimsonqClient](https://github.com/ywadi/crimsonqClient)|Yousef Wadi, Ola Alkhateeb|
+
+Please send up an issue to add your library here.
 
 ## CrimsonQ Admin UI 
 We are actively looking for contributors to help us deliver the the Ui
