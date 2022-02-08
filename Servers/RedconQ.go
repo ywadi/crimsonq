@@ -1,4 +1,4 @@
-package RedconQ
+package Servers
 
 import (
 	"errors"
@@ -6,7 +6,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"ywadi/crimsonq/Defs"
+	"ywadi/crimsonq/Structs"
+	"ywadi/crimsonq/Utils"
 
 	log "github.com/sirupsen/logrus"
 
@@ -14,21 +17,115 @@ import (
 	"github.com/tidwall/redcon"
 )
 
-// var mu sync.RWMutex
-var PS redcon.PubSub
+type ConnContext struct {
+	SelectDB string
+	Auth     bool
+}
 
-func Ping(con redcon.Conn, args ...[][]byte) error {
+var PS redcon.PubSub
+var crimsonQ *Structs.S_GOQ
+
+func StartRedCon(addr string, cq *Structs.S_GOQ) {
+	go cq.Init()
+	HeartBeat()
+	crimsonQ = cq
+	log.Info("started server at %s", addr)
+	err := redcon.ListenAndServe(addr,
+		execCommand,
+		func(conn redcon.Conn) bool {
+			ConnContext := ConnContext{Auth: false, SelectDB: ""}
+			conn.SetContext(ConnContext)
+			remoteIp := strings.Split(conn.RemoteAddr(), ":")[0]
+			fmt.Println("Client connected from ", remoteIp)
+			if viper.GetString("crimson_settings.ip_whitelist") == "*" {
+				return true
+			} else {
+				grant := Utils.SliceContains(viper.GetStringSlice("crimson_settings.ip_whitelist"), remoteIp)
+				return grant
+			}
+
+		},
+		func(conn redcon.Conn, err error) {
+			// This is called when the connection has been closed
+			// log.Printf("closed: %s, err: %v", conn.RemoteAddr(), err)
+
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func HeartBeat() {
+	log.Info("Heartbeat Started...")
+	ticker := time.NewTicker(time.Duration(viper.GetInt64("crimson_settings.heartbeat_seconds")) * time.Second)
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				for _, s := range crimsonQ.QDBPool {
+					count, err := crimsonQ.GetKeyCount(s.QdbId)
+					if err != nil {
+						log.WithFields(log.Fields{"ConsumerId": s.QdbId, "Status": Defs.STATUS_PENDING}).Error("JSON Parse error at heartbeart", err)
+					}
+					PS.Publish(s.QdbId, "pendingCount:"+fmt.Sprint(count[Defs.STATUS_PENDING]))
+				}
+			}
+		}
+	}()
+}
+
+func execCommand(conn redcon.Conn, cmd redcon.Command) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		cCmd := strings.ToLower(string(cmd.Args[0]))
+		cmdString := ""
+		for _, x := range cmd.Args {
+			cmdString = cmdString + " " + string(x)
+		}
+
+		log.WithFields(log.Fields{"addr": conn.RemoteAddr(), "cmd": cmdString}).Info("command executed")
+		if conn.Context().(ConnContext).Auth || cCmd == "auth" {
+			if val, ok := Commands[cCmd]; ok {
+
+				if len(val.ArgsCmd) == len(cmd.Args)-1 {
+					val.Redcon_Function.(func(con redcon.Conn, values ...[][]byte) error)(conn, cmd.Args[1:])
+					wg.Done()
+				} else {
+					conn.WriteError("Incorrect number of arguments for " + cCmd + ", expected " + fmt.Sprint(len(cmd.Args)-1) + "(" + strings.Join(val.ArgsCmd, ",") + ") but got " + fmt.Sprint(len(cmd.Args)) + " Args")
+					wg.Done()
+				}
+				return
+
+			}
+			conn.WriteError("incorrect command")
+			wg.Done()
+		} else {
+			conn.WriteError("Auth Error: You Shall not pass!")
+			wg.Done()
+			conn.Close()
+		}
+	}()
+	wg.Wait()
+}
+
+func RC_Ping(con redcon.Conn, args ...[][]byte) error {
 	con.WriteString("Pong! " + string(args[0][0]))
 	return nil
 }
 
-func Quit(con redcon.Conn, args ...[][]byte) error {
+func RC_Quit(con redcon.Conn, args ...[][]byte) error {
 	con.WriteString("Bye!")
 	con.Close()
 	return nil
 }
 
-func Auth(con redcon.Conn, args ...[][]byte) error {
+func RC_Auth(con redcon.Conn, args ...[][]byte) error {
 	if string(args[0][0]) == viper.GetString("crimson_settings.password") {
 		cntxt := con.Context().(ConnContext)
 		cntxt.Auth = true
@@ -39,7 +136,7 @@ func Auth(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func Command(con redcon.Conn, args ...[][]byte) error {
+func RC_Command(con redcon.Conn, args ...[][]byte) error {
 	con.WriteArray(len(Commands))
 	for k, v := range Commands {
 		con.WriteBulk([]byte(k + " [" + strings.Join(v.ArgsCmd, "] [") + "]"))
@@ -47,7 +144,7 @@ func Command(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func Subscribe(con redcon.Conn, args ...[][]byte) error {
+func RC_Subscribe(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
 		PS.Subscribe(con, consumerId)
@@ -57,12 +154,12 @@ func Subscribe(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func Exists(con redcon.Conn, args ...[][]byte) error {
+func RC_Exists(con redcon.Conn, args ...[][]byte) error {
 	con.WriteString(strconv.FormatBool(crimsonQ.ConsumerExists(string(args[0][0]))))
 	return nil
 }
 
-func Consumer_Create(con redcon.Conn, args ...[][]byte) error {
+func RC_Consumer_Create(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
 		con.WriteError(Defs.ERROConsumerAlreadyExists)
@@ -77,7 +174,7 @@ func Consumer_Create(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func Set_Concurrency(con redcon.Conn, args ...[][]byte) error {
+func RC_Set_Concurrency(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	concurrency := string(args[0][1])
 	if crimsonQ.ConsumerExists(consumerId) {
@@ -91,7 +188,7 @@ func Set_Concurrency(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func SetConsumerTopics(con redcon.Conn, args ...[][]byte) error {
+func RC_SetConsumerTopics(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	topicFilters := string(args[0][1])
 	if crimsonQ.ConsumerExists(consumerId) {
@@ -105,7 +202,7 @@ func SetConsumerTopics(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func ConsumerConcurrencyOk(con redcon.Conn, args ...[][]byte) error {
+func RC_ConsumerConcurrencyOk(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
 		con.WriteString(strconv.FormatBool(crimsonQ.ConcurrencyOk(consumerId)))
@@ -117,7 +214,7 @@ func ConsumerConcurrencyOk(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func GetConsumerTopics(con redcon.Conn, args ...[][]byte) error {
+func RC_GetConsumerTopics(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
 		topics := crimsonQ.GetTopics(consumerId)
@@ -132,7 +229,7 @@ func GetConsumerTopics(con redcon.Conn, args ...[][]byte) error {
 	}
 	return nil
 }
-func Destroy(con redcon.Conn, args ...[][]byte) error {
+func RC_Destroy(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.DestroyQDB(consumerId)
@@ -143,7 +240,7 @@ func Destroy(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func List(con redcon.Conn, args ...[][]byte) error {
+func RC_List(con redcon.Conn, args ...[][]byte) error {
 	clist := crimsonQ.ListConsumers()
 	con.WriteArray(len(clist))
 	for _, s := range clist {
@@ -152,7 +249,7 @@ func List(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func Msg_Keys(con redcon.Conn, args ...[][]byte) error {
+func RC_Msg_Keys(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	list, err := crimsonQ.ListAllKeys(consumerId)
 	if err != nil {
@@ -166,7 +263,7 @@ func Msg_Keys(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func Msg_Counts(con redcon.Conn, args ...[][]byte) error {
+func RC_Msg_Counts(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	counts, err := crimsonQ.GetKeyCount(consumerId)
 	if err != nil {
@@ -180,7 +277,7 @@ func Msg_Counts(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func Msg_Push_Topic(con redcon.Conn, args ...[][]byte) error {
+func RC_Msg_Push_Topic(con redcon.Conn, args ...[][]byte) error {
 	topic := string(args[0][0])
 	message := string(args[0][1])
 	consumers := crimsonQ.PushTopic(topic, message)
@@ -192,7 +289,7 @@ func Msg_Push_Topic(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
-func Msg_Push_Consumer(con redcon.Conn, args ...[][]byte) error {
+func RC_Msg_Push_Consumer(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	topic := string(args[0][0])
 	message := string(args[0][1])
@@ -210,7 +307,7 @@ func Msg_Push_Consumer(con redcon.Conn, args ...[][]byte) error {
 
 }
 
-func Msg_Pull(con redcon.Conn, args ...[][]byte) error {
+func RC_Msg_Pull(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
 		msg, err := crimsonQ.Pull(consumerId)
@@ -228,7 +325,7 @@ func Msg_Pull(con redcon.Conn, args ...[][]byte) error {
 }
 
 //TODO
-func Msg_Del(con redcon.Conn, args ...[][]byte) error {
+func RC_Msg_Del(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	status := string(args[0][1])
 	messageId := string(args[0][2])
@@ -248,7 +345,7 @@ func Msg_Del(con redcon.Conn, args ...[][]byte) error {
 	}
 }
 
-func Msg_Get_Status_Json(con redcon.Conn, args ...[][]byte) error {
+func RC_Msg_Get_Status_Json(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	status := strings.ToLower(string(args[0][1]))
 	if !(status == Defs.STATUS_ACTIVE || status == Defs.STATUS_COMPLETED || status == Defs.STATUS_DELAYED || status == Defs.STATUS_FAILED || status == Defs.STATUS_PENDING) {
@@ -271,7 +368,7 @@ func Msg_Get_Status_Json(con redcon.Conn, args ...[][]byte) error {
 	}
 }
 
-func Msg_Fail(con redcon.Conn, args ...[][]byte) error {
+func RC_Msg_Fail(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	messageId := string(args[0][1])
 	errMsg := string(args[0][2])
@@ -290,7 +387,7 @@ func Msg_Fail(con redcon.Conn, args ...[][]byte) error {
 	}
 }
 
-func Msg_Complete(con redcon.Conn, args ...[][]byte) error {
+func RC_Msg_Complete(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	messageId := string(args[0][1])
 	if crimsonQ.ConsumerExists(consumerId) {
@@ -308,7 +405,7 @@ func Msg_Complete(con redcon.Conn, args ...[][]byte) error {
 	}
 }
 
-func Msg_Retry(con redcon.Conn, args ...[][]byte) error {
+func RC_Msg_Retry(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	messageId := string(args[0][1])
 	if crimsonQ.ConsumerExists(consumerId) {
@@ -326,7 +423,7 @@ func Msg_Retry(con redcon.Conn, args ...[][]byte) error {
 	}
 }
 
-func Msg_Retry_All(con redcon.Conn, args ...[][]byte) error {
+func RC_Msg_Retry_All(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.ReqAllFailed(consumerId)
@@ -339,7 +436,7 @@ func Msg_Retry_All(con redcon.Conn, args ...[][]byte) error {
 	}
 }
 
-func Flush_Complete(con redcon.Conn, args ...[][]byte) error {
+func RC_Flush_Complete(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.ClearComplete(consumerId)
@@ -352,7 +449,7 @@ func Flush_Complete(con redcon.Conn, args ...[][]byte) error {
 	}
 }
 
-func Flush_Failed(con redcon.Conn, args ...[][]byte) error {
+func RC_Flush_Failed(con redcon.Conn, args ...[][]byte) error {
 	consumerId := string(args[0][0])
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.ClearFailed(consumerId)
@@ -365,87 +462,11 @@ func Flush_Failed(con redcon.Conn, args ...[][]byte) error {
 	}
 }
 
-func Info(con redcon.Conn, args ...[][]byte) error {
+func RC_Info(con redcon.Conn, args ...[][]byte) error {
 	info := []string{"CrimsonQ Server", "A NextGen Message Queue!"}
 	con.WriteArray(len(info))
 	for _, x := range info {
 		con.WriteString(x)
 	}
 	return nil
-}
-
-var Commands map[string]RedConCmds
-
-type RedConCmds struct {
-	Function           interface{}
-	ArgsCmd            []string
-	RequiresConsumerId bool
-}
-
-func initCommands() {
-	Commands = map[string]RedConCmds{
-		"ping":                     {Function: Ping, ArgsCmd: []string{"messageString"}, RequiresConsumerId: false},
-		"quit":                     {Function: Quit, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"auth":                     {Function: Auth, ArgsCmd: []string{"password"}, RequiresConsumerId: false},
-		"command":                  {Function: Command, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"info":                     {Function: Info, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"subscribe":                {Function: Subscribe, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"consumer.exists":          {Function: Exists, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: false},
-		"consumer.create":          {Function: Consumer_Create, ArgsCmd: []string{"consumerId", "topics", "concurrency"}, RequiresConsumerId: false},
-		"consumer.destroy":         {Function: Destroy, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"consumer.list":            {Function: List, ArgsCmd: []string{}, RequiresConsumerId: false},
-		"msg.keys":                 {Function: Msg_Keys, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg.counts":               {Function: Msg_Counts, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg.push.topic":           {Function: Msg_Push_Topic, ArgsCmd: []string{"topicString", "messageString"}, RequiresConsumerId: false},
-		"msg.push.consumer":        {Function: Msg_Push_Consumer, ArgsCmd: []string{"consumerId", "messageString"}, RequiresConsumerId: true},
-		"msg.pull":                 {Function: Msg_Pull, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"msg.del":                  {Function: Msg_Del, ArgsCmd: []string{"consumerId", "status", "messageId"}, RequiresConsumerId: true},
-		"msg.fail":                 {Function: Msg_Fail, ArgsCmd: []string{"consumerId", "messageId", "errMsg"}, RequiresConsumerId: true},
-		"msg.complete":             {Function: Msg_Complete, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
-		"msg.retry":                {Function: Msg_Retry, ArgsCmd: []string{"consumerId", "messageId"}, RequiresConsumerId: true},
-		"msg.retryall":             {Function: Msg_Retry_All, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"consumer.flush.complete":  {Function: Flush_Complete, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"consumer.flush.failed":    {Function: Flush_Failed, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"consumer.topics.set":      {Function: SetConsumerTopics, ArgsCmd: []string{"consumerId", "topics"}, RequiresConsumerId: true},
-		"consumer.topics.get":      {Function: GetConsumerTopics, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-		"consumer.concurrency.set": {Function: Set_Concurrency, ArgsCmd: []string{"consumerId", "concurrency"}, RequiresConsumerId: true},
-		"msg.list.json":            {Function: Msg_Get_Status_Json, ArgsCmd: []string{"consumerId", "status"}, RequiresConsumerId: true},
-		"consumer.concurrency.ok":  {Function: ConsumerConcurrencyOk, ArgsCmd: []string{"consumerId"}, RequiresConsumerId: true},
-	}
-}
-
-func execCommand(conn redcon.Conn, cmd redcon.Command) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go func() {
-		cCmd := strings.ToLower(string(cmd.Args[0]))
-		cmdString := ""
-		for _, x := range cmd.Args {
-			cmdString = cmdString + " " + string(x)
-		}
-
-		log.WithFields(log.Fields{"addr": conn.RemoteAddr(), "cmd": cmdString}).Info("command executed")
-		if conn.Context().(ConnContext).Auth || cCmd == "auth" {
-			if val, ok := Commands[cCmd]; ok {
-
-				if len(val.ArgsCmd) == len(cmd.Args)-1 {
-					val.Function.(func(con redcon.Conn, values ...[][]byte) error)(conn, cmd.Args[1:])
-					wg.Done()
-				} else {
-					conn.WriteError("Incorrect number of arguments for " + cCmd + ", expected " + fmt.Sprint(len(cmd.Args)-1) + "(" + strings.Join(val.ArgsCmd, ",") + ") but got " + fmt.Sprint(len(cmd.Args)) + " Args")
-					wg.Done()
-				}
-				return
-
-			}
-			conn.WriteError("incorrect command")
-			wg.Done()
-		} else {
-			conn.WriteError("Auth Error: You Shall not pass!")
-			wg.Done()
-			conn.Close()
-		}
-	}()
-	wg.Wait()
 }

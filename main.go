@@ -2,7 +2,7 @@ package main
 
 import (
 	"ywadi/crimsonq/Logger"
-	"ywadi/crimsonq/RedconQ"
+	"ywadi/crimsonq/Servers"
 	"ywadi/crimsonq/Structs"
 	viperq "ywadi/crimsonq/viperQ"
 
@@ -12,9 +12,10 @@ import (
 )
 
 func main() {
+	log.Info("Starting...")
 	viperq.Init()
 	Logger.Init()
-	log.Info("Starting...")
+	Servers.InitCommands()
 	crimsonQ := Structs.S_GOQ{}
-	RedconQ.StartRedCon(":"+viper.GetString("crimson_settings.port"), &crimsonQ)
+	Servers.StartRedCon(":"+viper.GetString("crimson_settings.port"), &crimsonQ)
 }
