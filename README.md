@@ -5,7 +5,7 @@
 ![GitHub](https://img.shields.io/github/license/ywadi/crimsonq)
 ![GitHub](https://img.shields.io/badge/Built%20On-Golang-lightgrey?logo=go)
 
-## A Multi Consumer per Message Queue with persistence and Queue Stages.
+## A Multi Consumer per Message with persistence and Queue Stages.
 ![crimsonq](https://github.com/ywadi/crimsonq/raw/main/assets/logo.png)
 
  __Currently functional and usable, actively being developed further__
