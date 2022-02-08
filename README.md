@@ -35,6 +35,10 @@ CrimsonQ allows publishers to target consumers with messages. This is done by ei
     sending the message to all the subtopics of consumer 
 You can find more on how mqtt topic matching works in the [link here](https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/) 
 
+Below is an animation explaining the concept for visual ease 
+
+![crimsonq](https://github.com/ywadi/crimsonq/raw/main/assets/anim.gif)
+
 ## Deploying CrimsonQ 
 You have 2 options, you either build it with Go or Build a docker image all ready to go. 
 ### Building and using Docker 
