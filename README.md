@@ -1,7 +1,4 @@
 
-
-
-
 # CrimsonQ
 [![buddy pipeline](https://app.buddy.works/ywadi85/crimsonq/pipelines/pipeline/373325/badge.svg?token=463c4f343893f85c5056a16ba6da1379079553b6b7a950b7ba9d643591fcb0d2 "buddy pipeline")](https://app.buddy.works/ywadi85/crimsonq/pipelines/pipeline/373325)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/ywadi/crimsonq)
@@ -252,8 +249,15 @@ Connect to default settings after running the CrimsonQ server like this
 	</tbody>
 </table>
 
+## Performance
+CrimsonQ Utilizes BadgerDB as its database layer, as well as RedCon as its RESP interface which both focus on high performance. Combine that with the concurrency of Golang. You get exceptional performance. 
+
+The writes done on CrimsonQ using redis-bencmark to write into queues is highly performant and has very low latency. Making it ideal for high-bandwidth read/right scenarios. 
+
+![Benchmark](https://github.com/ywadi/crimsonq/raw/main/assets/benchmark.png)
 
 ## Building a Client Library 
-TODO
+*TODO*
+While we get this section ready, check [The Nodejs Client Library](https://github.com/ywadi/crimsonqClient)
 
 
