@@ -127,7 +127,7 @@ Connect to default settings after running the CrimsonQ server like this
 			<td>Checks if consumer exists or not.</td>
 		</tr>
 		<tr>
-			<td>CONSUMER.FLUSH.COMPLETE</td>
+			<td>CONSUMER.FLUSH.FAIL</td>
 			<td>consumerId [string]</td>
 			<td></td>
 			<td>Deletes all failed messages for consumerId</td>
