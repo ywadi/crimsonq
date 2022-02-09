@@ -28,4 +28,10 @@ const (
 	ERRExceededConcurrency    string = "005:pull_exceeded_concurrency"
 	ERRIncorrectMessageId     string = "006:incorrect message id"
 	ERRStatusNotAllowed       string = "007:method_not_allowed_on_http"
+	ERRIncorrectArgs          string = "008: incorrect_args"
+)
+
+const (
+	HTTP_GET  string = "GET"
+	HTTP_POST string = "POST "
 )

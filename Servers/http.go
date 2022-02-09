@@ -15,17 +15,34 @@ import (
 
 var app *fiber.App
 
+type PostBody struct {
+	consumerId    string
+	topics        string
+	messageId     string
+	errMsg        string
+	topicString   string
+	messageString string
+	status        string
+	concurrency   string
+}
+
 func HTTP_Start(cq *Structs.S_GOQ) {
 	app = fiber.New()
 	app.Use(recover.New())
 
 	for k, v := range Commands {
-		route := "/api/" + strings.ReplaceAll(k, ".", "/")
-		for _, av := range v.ArgsCmd {
-			route = route + "/:" + av
+		if v.HTTP_Method == Defs.HTTP_GET {
+			route := "/api/" + strings.ReplaceAll(k, ".", "/")
+			for _, av := range v.ArgsCmd {
+				route = route + "/:" + av
+			}
+			fmt.Println("|GET|" + route + "|" + strings.Join(v.ArgsCmd, " - ") + "|JSON|")
+			app.Get(route, v.HTTP_Function)
+		} else if v.HTTP_Method == Defs.HTTP_POST {
+			route := "/api/" + strings.ReplaceAll(k, ".", "/")
+			fmt.Println("|POST|" + route + "|" + strings.Join(v.ArgsCmd, " - ") + "|JSON|")
 		}
-		fmt.Println(route)
-		app.Get(route, v.HTTP_Function)
+
 	}
 
 	app.Listen(":8080")
@@ -61,12 +78,17 @@ func HTTP_Exists(c *fiber.Ctx) error {
 }
 
 func HTTP_Consumer_Create(c *fiber.Ctx) error {
-	consumerId := string(c.Params("consumerId"))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+
+	consumerId := bodyData.consumerId
 	if crimsonQ.ConsumerExists(consumerId) {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERROConsumerAlreadyExists)
 	}
-	consumerTopics := string(c.Params("topics"))
-	consumerConcurrent := string(c.Params("concurrency"))
+	consumerTopics := bodyData.topics
+	consumerConcurrent := bodyData.concurrency
 	crimsonQ.CreateQDB(consumerId, viper.GetString("crimson_settings.data_rootpath"))
 	crimsonQ.SetConcurrency(consumerId, consumerConcurrent)
 	crimsonQ.SetTopics(consumerId, consumerTopics)
@@ -74,8 +96,12 @@ func HTTP_Consumer_Create(c *fiber.Ctx) error {
 }
 
 func HTTP_Set_Concurrency(c *fiber.Ctx) error {
-	consumerId := string(c.Params("consumerId"))
-	concurrency := string(c.Params("concurrency"))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+	consumerId := bodyData.consumerId
+	concurrency := bodyData.concurrency
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.SetConcurrency(consumerId, concurrency)
 		return c.JSON("ok")
@@ -117,7 +143,11 @@ func HTTP_GetConsumerTopics(c *fiber.Ctx) error {
 	}
 }
 func HTTP_Destroy(c *fiber.Ctx) error {
-	consumerId := string(c.Params("consumerId"))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+	consumerId := bodyData.consumerId
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.DestroyQDB(consumerId)
 		return c.SendString("ok")
@@ -154,8 +184,12 @@ func HTTP_Msg_Counts(c *fiber.Ctx) error {
 }
 
 func HTTP_Msg_Push_Topic(c *fiber.Ctx) error {
-	topic := string(c.Params("topicString"))
-	message := string(c.Params("messageString"))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+	topic := bodyData.topicString
+	message := bodyData.messageString
 	consumers := crimsonQ.PushTopic(topic, message)
 	for consumer, msgkey := range consumers {
 		msgkeySplit := strings.Split(msgkey, ":")
@@ -165,9 +199,13 @@ func HTTP_Msg_Push_Topic(c *fiber.Ctx) error {
 }
 
 func HTTP_Msg_Push_Consumer(c *fiber.Ctx) error {
-	consumerId := string(c.Params("consumerId"))
-	topic := string(c.Params("consumerId"))
-	message := string(c.Params("messageString"))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+	consumerId := bodyData.consumerId
+	topic := bodyData.consumerId
+	message := bodyData.messageString
 	if crimsonQ.ConsumerExists(consumerId) {
 		msgkey := crimsonQ.PushConsumer(consumerId, "direct:"+topic, message)
 		msgkeySplit := strings.Split(msgkey, ":")
@@ -194,9 +232,14 @@ func HTTP_Msg_Pull(c *fiber.Ctx) error {
 }
 
 func HTTP_Msg_Del(c *fiber.Ctx) error {
-	consumerId := string(c.Params("consumerId"))
-	status := string(c.Params("status"))
-	messageId := string(c.Params("messageId"))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+
+	consumerId := bodyData.consumerId
+	status := bodyData.status
+	messageId := bodyData.messageId
 
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.Del(status, consumerId, messageId)
@@ -229,9 +272,14 @@ func HTTP_Msg_Get_Status_Json(c *fiber.Ctx) error {
 }
 
 func HTTP_Msg_Fail(c *fiber.Ctx) error {
-	consumerId := string(c.Params("consumerId"))
-	messageId := string(c.Params("messageId"))
-	errMsg := string(c.Params("errMsg"))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+
+	consumerId := bodyData.consumerId
+	messageId := bodyData.messageId
+	errMsg := bodyData.errMsg
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.MsgFail(consumerId, messageId, errMsg)
 		if err != nil {
@@ -244,8 +292,13 @@ func HTTP_Msg_Fail(c *fiber.Ctx) error {
 }
 
 func HTTP_Msg_Complete(c *fiber.Ctx) error {
-	consumerId := string(c.Params("consumerId"))
-	messageId := string(c.Params(""))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+
+	consumerId := bodyData.consumerId
+	messageId := bodyData.messageId
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.MsgComplete(consumerId, messageId)
 		if err != nil {
@@ -258,8 +311,12 @@ func HTTP_Msg_Complete(c *fiber.Ctx) error {
 }
 
 func HTTP_Msg_Retry(c *fiber.Ctx) error {
-	consumerId := string(c.Params("consumerId"))
-	messageId := string(c.Params(""))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+	consumerId := bodyData.consumerId
+	messageId := bodyData.messageId
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.MsgRetry(consumerId, messageId)
 		if err != nil {
@@ -272,7 +329,11 @@ func HTTP_Msg_Retry(c *fiber.Ctx) error {
 }
 
 func HTTP_Msg_Retry_All(c *fiber.Ctx) error {
-	consumerId := string(c.Params("consumerId"))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+	consumerId := bodyData.consumerId
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.ReqAllFailed(consumerId)
 		return c.SendString("Ok")
@@ -282,7 +343,11 @@ func HTTP_Msg_Retry_All(c *fiber.Ctx) error {
 }
 
 func HTTP_Flush_Complete(c *fiber.Ctx) error {
-	consumerId := string(c.Params("consumerId"))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+	consumerId := bodyData.consumerId
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.ClearComplete(consumerId)
 		return c.SendString("Ok")
@@ -292,7 +357,11 @@ func HTTP_Flush_Complete(c *fiber.Ctx) error {
 }
 
 func HTTP_Flush_Failed(c *fiber.Ctx) error {
-	consumerId := string(c.Params("consumerId"))
+	bodyData := PostBody{}
+	if err := c.BodyParser(bodyData); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+	consumerId := bodyData.consumerId
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.ClearFailed(consumerId)
 		return c.SendString("Ok")
