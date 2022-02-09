@@ -12,7 +12,7 @@ RUN apk update
 COPY --from=builder /go/bin/crimsonq /go/bin/crimsonq
 RUN mkdir -p /CrimsonQ/.crimsonQ
 WORKDIR /CrimsonQ/.crimsonQ
-COPY ./crimson.config /CrimsonQ/.crimsonQ
+COPY ./crimson.config /
 EXPOSE 9001
 EXPOSE 8080
 
