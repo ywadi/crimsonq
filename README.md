@@ -251,38 +251,46 @@ You can execute the following commands over the RESP protocol, for testing use r
 </table>
 
 ### Connecting using HTTP Rest API 
-Use the following routes to execute the commands, they are similar to the RESP but in HTTP format. The server utilizes only the GET route for all CRUD for simplicity of usage.  
+Use the following routes to execute the commands, they are similar to the RESP but in HTTP format. The server utilizes the GET and POST methods as below;
+The mention of variables in the table are as follows;
+|Variable|Type|Usage|
+|--|--|--|
+consumerId|string|The consumer Id that will be used 
+topics| string| A comma separated string of topics ex: path1/sub1,path2/sub2
+messageId| string|The message Id 
+errMsg| string| An error message that can be passed to a message on fail
+topicString| string| A topic string that will be used to push messages to consumers 
+messageString| string| The message body/payload to be added to message
+status| string| The status of a message (pending, active, delayed, failed ,completed)
+|concurrency| int| The allowed concurrency for the consumer if 0 it will be unlimited 
 
+#### API Routes 
 |Method|HTTP Route|Arguments|Returns|
 |--|--|--|--|
-|GET|/api/auth/:password|password|JSON|Returns|
-|GET|/api/command||JSON|Returns|
-|GET|/api/consumer/concurrency/ok/:consumerId|consumerId|JSON|Returns|
-|GET|/api/consumer/exists/:consumerId|consumerId|JSON|Returns|
-|GET|/api/consumer/list||JSON|Returns|
-|GET|/api/consumer/topics/get/:consumerId|consumerId|JSON|Returns|
-|GET|/api/info||JSON|Returns|
-|GET|/api/msg/counts/:consumerId|consumerId|JSON|Returns|
-|GET|/api/msg/keys/:consumerId|consumerId|JSON|Returns|
-|GET|/api/msg/list/json/:consumerId/:status|consumerId - status|JSON|Returns|
-|GET|/api/msg/pull/:consumerId|consumerId|JSON|Returns|
-|GET|/api/ping/:messageString|messageString|JSON|Returns|
-|GET|/api/quit||JSON|Returns|
-|GET|/api/subscribe/:consumerId|consumerId|JSON|Returns|
-|POST|/api/consumer/concurrency/set|consumerId - concurrency|JSON|Returns|
-|POST|/api/consumer/create|consumerId - topics - concurrency|JSON|Returns|
-|POST|/api/consumer/destroy|consumerId|JSON|Returns|
-|POST|/api/consumer/flush/complete|consumerId|JSON|Returns|
-|POST|/api/consumer/flush/failed|consumerId|JSON|Returns|
-|POST|/api/consumer/topics/set|consumerId - topics|JSON|Returns|
-|POST|/api/msg/complete|consumerId - messageId|JSON|Returns|
-|POST|/api/msg/del|consumerId - status - messageId|JSON|Returns|
-|POST|/api/msg/fail|consumerId - messageId - errMsg|JSON|Returns|
-|POST|/api/msg/push/consumer|consumerId - messageString|JSON|Returns|
-|POST|/api/msg/push/topic|topicString - messageString|JSON|Returns|
-|POST|/api/msg/retryall|consumerId|JSON|Returns|
-|POST|/api/msg/retry|consumerId - messageId|JSON|Returns|
-
+|GET|/api/command||{JSON} List of comands
+|GET|/api/consumer/concurrency/ok/:consumerId|consumerId|{JSON} Returns true or false depending on if the consumer has bandwidth to process messages
+|GET|/api/consumer/exists/:consumerId|consumerId|JSON|Returns|{JSON} true or false if the consumer exists 
+|GET|/api/consumer/list||{JSON} List of all consumers 
+|GET|/api/consumer/topics/get/:consumerId|consumerId|{JSON} Returns the topics the consumer is listening on
+|GET|/api/info||{JSON} CrimsonQ Server Information
+|GET|/api/msg/counts/:consumerId|consumerId|{JSON} List Count of messages grouped by status
+|GET|/api/msg/keys/:consumerId|consumerId|{JSON} List of all keys prefixed with status
+|GET|/api/msg/list/json/:consumerId/:status|consumerId - status|{JSON} Gets all of the messages' body for a spesific consumerId and Status
+|GET|/api/msg/pull/:consumerId|consumerId|{JSON} Pulls and returns a message with its body 
+|GET|/api/ping/:messageString|messageString|{JSON} Returns Pong! + [messageString]
+|POST|/api/consumer/concurrency/set|consumerId - concurrency|{JSON} ok or Error
+|POST|/api/consumer/create|consumerId - topics - concurrency|{JSON} ok or Error
+|POST|/api/consumer/destroy|consumerId|{JSON} ok or Error
+|POST|/api/consumer/flush/complete|consumerId|{JSON} ok or Error
+|POST|/api/consumer/flush/failed|consumerId|{JSON} ok or Error
+|POST|/api/consumer/topics/set|consumerId - topics|{JSON} ok or Error
+|POST|/api/msg/complete|consumerId - messageId|{JSON} ok or Error
+|POST|/api/msg/del|consumerId - status - messageId|{JSON} ok or Error
+|POST|/api/msg/fail|consumerId - messageId - errMsg|{JSON} ok or Error
+|POST|/api/msg/push/consumer|consumerId - messageString|{JSON} ok or Error
+|POST|/api/msg/push/topic|topicString - messageString|{JSON} ok or Error
+|POST|/api/msg/retryall|consumerId|{JSON} ok or Error
+|POST|/api/msg/retry|consumerId - messageId|{JSON} ok or Error|
 
 
 
