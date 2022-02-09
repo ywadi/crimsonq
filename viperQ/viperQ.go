@@ -11,6 +11,7 @@ func Init() {
 	viper.SetConfigName("crimson.config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("/")
+	viper.AddConfigPath(".")
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
 		log.Fatal(fmt.Errorf("fatal error config file: %w \n", err))

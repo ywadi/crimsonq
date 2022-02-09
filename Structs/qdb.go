@@ -176,10 +176,13 @@ func (qdb *S_QDB) MarkDelayed(key string) {
 
 func (qdb *S_QDB) RetryFailed(key string) error {
 	splitKey := strings.Split(key, ":")
+	var lkey string
 	if len(splitKey) < 2 {
-		return errors.New("incorrect key")
+		lkey = splitKey[0]
+	} else {
+		lkey = splitKey[1]
 	}
-	_, err := qdb.MoveMsg(splitKey[1], Defs.STATUS_FAILED, Defs.STATUS_PENDING, "")
+	_, err := qdb.MoveMsg(lkey, Defs.STATUS_FAILED, Defs.STATUS_PENDING, "")
 	if err != nil {
 		return err
 	}
