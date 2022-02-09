@@ -60,13 +60,6 @@ You can setup CrimsonQ to manage your server as needed. You can find the file in
 The settings yaml is as follows 
 
     crimson_settings:
-      port: 9001  //The RESP IP address to connect to 
-      password: "crimsonQ!" //The password to be used to authenticate 
-      ip_whitelist: '*' //IP white list for all OR below 
-      ip_whitelist: //This is an alternitave to "*" to be strict on IPs
-	      - 127.0.0.1
-	      - 198.162.0.12
-      heartbeat_seconds: 30 //How many seconds to send consumers a Pub about whats in pending 
       system_db_path: /CrimsonQ/.crimsonQ/dbs //Path for crimsonq system db files will be stored
       data_rootpath: /CrimsonQ/.crimsonQ/dbs //Path for the consumer db data will be stored
       watchdog_seconds: 5 //Seconds for when the watchdog will check for expirations 
@@ -77,6 +70,23 @@ The settings yaml is as follows
       db_detect_conflicts: true //Allows DB to avoid conflicts but lower in performance
       consumer_inactive_destroy_hours: 48 //How many hours of no consumer msg.pull command before destroying consumer queue 
       log_file: /CrimsonQ/.crimsonQ/logs //The file with the log information 
+    HTTP:
+	  enabled: true //Enable or disable HTTP REST interface
+	  port: 8080 //Port for the HTTP to listen on 
+      ip_whitelist: '*' //IP white list for all OR below 
+      ip_whitelist: //This is an alternitave to "*" to be strict on IPs
+	      - 127.0.0.1
+	      - 198.162.0.12	  
+	  username: "crimsonQ" //Basic Auth to connect by username
+	  password: "crimsonQ!" //Password for basic auth username 
+	RESP:
+	  port: 9001 //Port for where the RESP interface will work 
+	  password: "crimsonQ!" //RESP password to connect 
+      ip_whitelist: '*' //IP white list for all OR below 
+      ip_whitelist: //This is an alternitave to "*" to be strict on IPs
+	      - 127.0.0.1
+	      - 198.162.0.12	  
+      heartbeat_seconds: 30 //How many seconds to send consumers a Pub about whats in pending 
 
 
 ## CrimsonQ connecting and controlling 
