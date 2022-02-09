@@ -14,5 +14,6 @@ RUN mkdir -p /CrimsonQ/.crimsonQ
 WORKDIR /CrimsonQ/.crimsonQ
 COPY ./crimson.config /CrimsonQ/.crimsonQ
 EXPOSE 9001
+EXPOSE 8080
 
 ENTRYPOINT ["/go/bin/crimsonq"]
