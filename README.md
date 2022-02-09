@@ -87,7 +87,8 @@ Connect to default settings after running the CrimsonQ server like this
 
     redis-cli -p 9001 -a crimsonQ!
 
-
+### Connecting through RESP (redis protocol) 
+You can execute the following commands over the RESP protocol, for testing use redis-cli.
 <table border="1" cellpadding="1" cellspacing="1" style="width:500px;">
 	<tbody>
 		<tr>
@@ -248,6 +249,42 @@ Connect to default settings after running the CrimsonQ server like this
 		</tr>
 	</tbody>
 </table>
+
+### Connecting using HTTP Rest API 
+Use the following routes to execute the commands, they are similar to the RESP but in HTTP format. The server utilizes only the GET route for all CRUD for simplicity of usage.  
+
+|Method|HTTP Route|Arguments|Returns|
+|--|--|--|--|
+|GET|/api/auth/:password|password|JSON|Returns|
+|GET|/api/command||JSON|Returns|
+|GET|/api/consumer/concurrency/ok/:consumerId|consumerId|JSON|Returns|
+|GET|/api/consumer/exists/:consumerId|consumerId|JSON|Returns|
+|GET|/api/consumer/list||JSON|Returns|
+|GET|/api/consumer/topics/get/:consumerId|consumerId|JSON|Returns|
+|GET|/api/info||JSON|Returns|
+|GET|/api/msg/counts/:consumerId|consumerId|JSON|Returns|
+|GET|/api/msg/keys/:consumerId|consumerId|JSON|Returns|
+|GET|/api/msg/list/json/:consumerId/:status|consumerId - status|JSON|Returns|
+|GET|/api/msg/pull/:consumerId|consumerId|JSON|Returns|
+|GET|/api/ping/:messageString|messageString|JSON|Returns|
+|GET|/api/quit||JSON|Returns|
+|GET|/api/subscribe/:consumerId|consumerId|JSON|Returns|
+|POST|/api/consumer/concurrency/set|consumerId - concurrency|JSON|Returns|
+|POST|/api/consumer/create|consumerId - topics - concurrency|JSON|Returns|
+|POST|/api/consumer/destroy|consumerId|JSON|Returns|
+|POST|/api/consumer/flush/complete|consumerId|JSON|Returns|
+|POST|/api/consumer/flush/failed|consumerId|JSON|Returns|
+|POST|/api/consumer/topics/set|consumerId - topics|JSON|Returns|
+|POST|/api/msg/complete|consumerId - messageId|JSON|Returns|
+|POST|/api/msg/del|consumerId - status - messageId|JSON|Returns|
+|POST|/api/msg/fail|consumerId - messageId - errMsg|JSON|Returns|
+|POST|/api/msg/push/consumer|consumerId - messageString|JSON|Returns|
+|POST|/api/msg/push/topic|topicString - messageString|JSON|Returns|
+|POST|/api/msg/retryall|consumerId|JSON|Returns|
+|POST|/api/msg/retry|consumerId - messageId|JSON|Returns|
+
+
+
 
 ## Performance
 CrimsonQ Utilizes BadgerDB as its database layer, as well as RedCon as its RESP interface which both focus on high performance. Combine that with the concurrency of Golang. You get exceptional performance. 
