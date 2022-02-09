@@ -13,9 +13,10 @@ import (
 
 func main() {
 	log.Info("Starting...")
+	crimsonQ := Structs.S_GOQ{}
 	viperq.Init()
 	Logger.Init()
 	Servers.InitCommands()
-	crimsonQ := Structs.S_GOQ{}
+	go Servers.HTTP_Start(&crimsonQ)
 	Servers.StartRedCon(":"+viper.GetString("crimson_settings.port"), &crimsonQ)
 }

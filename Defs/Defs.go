@@ -26,4 +26,6 @@ const (
 	ERRIncorrectStatus        string = "003:incorrect_status"
 	ERROConsumerAlreadyExists string = "004:consumer_exists"
 	ERRExceededConcurrency    string = "005:pull_exceeded_concurrency"
+	ERRIncorrectMessageId     string = "006:incorrect message id"
+	ERRStatusNotAllowed       string = "007:method_not_allowed_on_http"
 )
