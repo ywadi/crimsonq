@@ -7,8 +7,11 @@ import (
 	"strings"
 	"ywadi/crimsonq/Defs"
 	"ywadi/crimsonq/Structs"
+	"ywadi/crimsonq/Utils"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/basicauth"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/spf13/viper"
 )
@@ -29,6 +32,24 @@ type PostBody struct {
 func HTTP_Start(cq *Structs.S_GOQ) {
 	app = fiber.New()
 	app.Use(recover.New())
+	app.Use(cors.New())
+
+	app.Use(basicauth.New(basicauth.Config{
+		Users: map[string]string{
+			viper.GetString("HTTP.username"): viper.GetString("HTTP.password"),
+		},
+	}))
+
+	app.Use(func(c *fiber.Ctx) error {
+		if viper.GetString("HTTP.ip_whitelist") != "*" {
+			grant := Utils.SliceContains(viper.GetStringSlice("HTTP.ip_whitelist"), c.IP())
+			if !grant {
+				return fiber.NewError(fiber.StatusForbidden)
+			}
+		}
+		c.Next()
+		return nil
+	})
 
 	for k, v := range Commands {
 		if v.HTTP_Method == Defs.HTTP_GET {
@@ -46,7 +67,7 @@ func HTTP_Start(cq *Structs.S_GOQ) {
 
 	}
 
-	app.Listen(":" + viper.GetString("crimson_settings.HTTP_PORT"))
+	app.Listen(":" + viper.GetString("HTTP.port"))
 }
 
 func HTTP_Ping(c *fiber.Ctx) error {

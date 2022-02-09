@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"ywadi/crimsonq/Logger"
 	"ywadi/crimsonq/Servers"
 	"ywadi/crimsonq/Structs"
@@ -17,6 +18,13 @@ func main() {
 	viperq.Init()
 	Logger.Init()
 	Servers.InitCommands()
-	go Servers.HTTP_Start(&crimsonQ)
-	Servers.StartRedCon(":"+viper.GetString("crimson_settings.port"), &crimsonQ)
+	enableHTTP, err := strconv.ParseBool(viper.GetString("HTTP.enabled"))
+
+	if err != nil {
+		log.Fatal("crimson.config value for HTTP enabled needs to be true or false")
+	}
+	if enableHTTP {
+		go Servers.HTTP_Start(&crimsonQ)
+	}
+	Servers.StartRedCon(":"+viper.GetString("RESP.port"), &crimsonQ)
 }

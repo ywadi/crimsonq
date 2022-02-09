@@ -37,10 +37,10 @@ func StartRedCon(addr string, cq *Structs.S_GOQ) {
 			conn.SetContext(ConnContext)
 			remoteIp := strings.Split(conn.RemoteAddr(), ":")[0]
 			fmt.Println("Client connected from ", remoteIp)
-			if viper.GetString("crimson_settings.ip_whitelist") == "*" {
+			if viper.GetString("RESP.ip_whitelist") == "*" {
 				return true
 			} else {
-				grant := Utils.SliceContains(viper.GetStringSlice("crimson_settings.ip_whitelist"), remoteIp)
+				grant := Utils.SliceContains(viper.GetStringSlice("RESP.ip_whitelist"), remoteIp)
 				return grant
 			}
 
@@ -58,7 +58,7 @@ func StartRedCon(addr string, cq *Structs.S_GOQ) {
 
 func HeartBeat() {
 	log.Info("Heartbeat Started...")
-	ticker := time.NewTicker(time.Duration(viper.GetInt64("crimson_settings.heartbeat_seconds")) * time.Second)
+	ticker := time.NewTicker(time.Duration(viper.GetInt64("RESP.heartbeat_seconds")) * time.Second)
 	done := make(chan bool)
 	go func() {
 		for {
@@ -126,7 +126,7 @@ func RC_Quit(con redcon.Conn, args ...[][]byte) error {
 }
 
 func RC_Auth(con redcon.Conn, args ...[][]byte) error {
-	if string(args[0][0]) == viper.GetString("crimson_settings.password") {
+	if string(args[0][0]) == viper.GetString("RESP.password") {
 		cntxt := con.Context().(ConnContext)
 		cntxt.Auth = true
 		con.SetContext(cntxt)
