@@ -16,14 +16,14 @@ import (
 var app *fiber.App
 
 type PostBody struct {
-	consumerId    string
-	topics        string
-	messageId     string
-	errMsg        string
-	topicString   string
-	messageString string
-	status        string
-	concurrency   string
+	ConsumerId    string `json:"consumerId" xml:"consumerId" form:"consumerId"`
+	Topics        string `json:"topics" xml:"topics" form:"topics"`
+	MessageId     string `json:"messageId" xml:"messageId" form:"messageId"`
+	ErrMsg        string `json:"errMsg" xml:"errMsg" form:"errMsg"`
+	TopicString   string `json:"topicString" xml:"topicString" form:"topicString"`
+	MessageString string `json:"messageString" xml:"messageString" form:"messageString"`
+	Status        string `json:"status" xml:"status" form:"status"`
+	Concurrency   string `json:"concurrency" xml:"concurrency" form:"concurrency"`
 }
 
 func HTTP_Start(cq *Structs.S_GOQ) {
@@ -41,6 +41,7 @@ func HTTP_Start(cq *Structs.S_GOQ) {
 		} else if v.HTTP_Method == Defs.HTTP_POST {
 			route := "/api/" + strings.ReplaceAll(k, ".", "/")
 			fmt.Println("|POST|" + route + "|" + strings.Join(v.ArgsCmd, " - ") + "|JSON|")
+			app.Post(route, v.HTTP_Function)
 		}
 
 	}
@@ -79,16 +80,17 @@ func HTTP_Exists(c *fiber.Ctx) error {
 
 func HTTP_Consumer_Create(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
+		fmt.Println(err)
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
 
-	consumerId := bodyData.consumerId
+	consumerId := bodyData.ConsumerId
 	if crimsonQ.ConsumerExists(consumerId) {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERROConsumerAlreadyExists)
 	}
-	consumerTopics := bodyData.topics
-	consumerConcurrent := bodyData.concurrency
+	consumerTopics := bodyData.Topics
+	consumerConcurrent := bodyData.Concurrency
 	crimsonQ.CreateQDB(consumerId, viper.GetString("crimson_settings.data_rootpath"))
 	crimsonQ.SetConcurrency(consumerId, consumerConcurrent)
 	crimsonQ.SetTopics(consumerId, consumerTopics)
@@ -97,11 +99,11 @@ func HTTP_Consumer_Create(c *fiber.Ctx) error {
 
 func HTTP_Set_Concurrency(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
-	consumerId := bodyData.consumerId
-	concurrency := bodyData.concurrency
+	consumerId := bodyData.ConsumerId
+	concurrency := bodyData.Concurrency
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.SetConcurrency(consumerId, concurrency)
 		return c.JSON("ok")
@@ -144,10 +146,10 @@ func HTTP_GetConsumerTopics(c *fiber.Ctx) error {
 }
 func HTTP_Destroy(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
-	consumerId := bodyData.consumerId
+	consumerId := bodyData.ConsumerId
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.DestroyQDB(consumerId)
 		return c.SendString("ok")
@@ -185,11 +187,11 @@ func HTTP_Msg_Counts(c *fiber.Ctx) error {
 
 func HTTP_Msg_Push_Topic(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
-	topic := bodyData.topicString
-	message := bodyData.messageString
+	topic := bodyData.TopicString
+	message := bodyData.MessageString
 	consumers := crimsonQ.PushTopic(topic, message)
 	for consumer, msgkey := range consumers {
 		msgkeySplit := strings.Split(msgkey, ":")
@@ -200,12 +202,12 @@ func HTTP_Msg_Push_Topic(c *fiber.Ctx) error {
 
 func HTTP_Msg_Push_Consumer(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
-	consumerId := bodyData.consumerId
-	topic := bodyData.consumerId
-	message := bodyData.messageString
+	consumerId := bodyData.ConsumerId
+	topic := bodyData.ConsumerId
+	message := bodyData.MessageString
 	if crimsonQ.ConsumerExists(consumerId) {
 		msgkey := crimsonQ.PushConsumer(consumerId, "direct:"+topic, message)
 		msgkeySplit := strings.Split(msgkey, ":")
@@ -233,13 +235,13 @@ func HTTP_Msg_Pull(c *fiber.Ctx) error {
 
 func HTTP_Msg_Del(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
 
-	consumerId := bodyData.consumerId
-	status := bodyData.status
-	messageId := bodyData.messageId
+	consumerId := bodyData.ConsumerId
+	status := bodyData.Status
+	messageId := bodyData.MessageId
 
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.Del(status, consumerId, messageId)
@@ -273,13 +275,13 @@ func HTTP_Msg_Get_Status_Json(c *fiber.Ctx) error {
 
 func HTTP_Msg_Fail(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
 
-	consumerId := bodyData.consumerId
-	messageId := bodyData.messageId
-	errMsg := bodyData.errMsg
+	consumerId := bodyData.ConsumerId
+	messageId := bodyData.MessageId
+	errMsg := bodyData.ErrMsg
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.MsgFail(consumerId, messageId, errMsg)
 		if err != nil {
@@ -293,12 +295,12 @@ func HTTP_Msg_Fail(c *fiber.Ctx) error {
 
 func HTTP_Msg_Complete(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
 
-	consumerId := bodyData.consumerId
-	messageId := bodyData.messageId
+	consumerId := bodyData.ConsumerId
+	messageId := bodyData.MessageId
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.MsgComplete(consumerId, messageId)
 		if err != nil {
@@ -312,11 +314,11 @@ func HTTP_Msg_Complete(c *fiber.Ctx) error {
 
 func HTTP_Msg_Retry(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
-	consumerId := bodyData.consumerId
-	messageId := bodyData.messageId
+	consumerId := bodyData.ConsumerId
+	messageId := bodyData.MessageId
 	if crimsonQ.ConsumerExists(consumerId) {
 		err := crimsonQ.MsgRetry(consumerId, messageId)
 		if err != nil {
@@ -330,10 +332,10 @@ func HTTP_Msg_Retry(c *fiber.Ctx) error {
 
 func HTTP_Msg_Retry_All(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
-	consumerId := bodyData.consumerId
+	consumerId := bodyData.ConsumerId
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.ReqAllFailed(consumerId)
 		return c.SendString("Ok")
@@ -344,10 +346,10 @@ func HTTP_Msg_Retry_All(c *fiber.Ctx) error {
 
 func HTTP_Flush_Complete(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
-	consumerId := bodyData.consumerId
+	consumerId := bodyData.ConsumerId
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.ClearComplete(consumerId)
 		return c.SendString("Ok")
@@ -358,10 +360,10 @@ func HTTP_Flush_Complete(c *fiber.Ctx) error {
 
 func HTTP_Flush_Failed(c *fiber.Ctx) error {
 	bodyData := PostBody{}
-	if err := c.BodyParser(bodyData); err != nil {
+	if err := c.BodyParser(&bodyData); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
-	consumerId := bodyData.consumerId
+	consumerId := bodyData.ConsumerId
 	if crimsonQ.ConsumerExists(consumerId) {
 		crimsonQ.ClearFailed(consumerId)
 		return c.SendString("Ok")
