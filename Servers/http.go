@@ -20,7 +20,7 @@ func HTTP_Start(cq *Structs.S_GOQ) {
 	app.Use(recover.New())
 
 	for k, v := range Commands {
-		route := "/apis/" + strings.ReplaceAll(k, ".", "/")
+		route := "/api/" + strings.ReplaceAll(k, ".", "/")
 		for _, av := range v.ArgsCmd {
 			route = route + "/:" + av
 		}
