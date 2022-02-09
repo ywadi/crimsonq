@@ -23,7 +23,7 @@ type PostBody struct {
 	TopicString   string `json:"topicString" xml:"topicString" form:"topicString"`
 	MessageString string `json:"messageString" xml:"messageString" form:"messageString"`
 	Status        string `json:"status" xml:"status" form:"status"`
-	Concurrency   string `json:"concurrency" xml:"concurrency" form:"concurrency"`
+	Concurrency   int    `json:"concurrency" xml:"concurrency" form:"concurrency"`
 }
 
 func HTTP_Start(cq *Structs.S_GOQ) {
@@ -46,7 +46,7 @@ func HTTP_Start(cq *Structs.S_GOQ) {
 
 	}
 
-	app.Listen(":8080")
+	app.Listen(":" + viper.GetString("crimson_settings.HTTP_PORT"))
 }
 
 func HTTP_Ping(c *fiber.Ctx) error {
@@ -90,7 +90,7 @@ func HTTP_Consumer_Create(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERROConsumerAlreadyExists)
 	}
 	consumerTopics := bodyData.Topics
-	consumerConcurrent := bodyData.Concurrency
+	consumerConcurrent := strconv.Itoa(bodyData.Concurrency)
 	crimsonQ.CreateQDB(consumerId, viper.GetString("crimson_settings.data_rootpath"))
 	crimsonQ.SetConcurrency(consumerId, consumerConcurrent)
 	crimsonQ.SetTopics(consumerId, consumerTopics)
@@ -100,12 +100,13 @@ func HTTP_Consumer_Create(c *fiber.Ctx) error {
 func HTTP_Set_Concurrency(c *fiber.Ctx) error {
 	bodyData := PostBody{}
 	if err := c.BodyParser(&bodyData); err != nil {
+		fmt.Println(err)
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
 	consumerId := bodyData.ConsumerId
 	concurrency := bodyData.Concurrency
 	if crimsonQ.ConsumerExists(consumerId) {
-		crimsonQ.SetConcurrency(consumerId, concurrency)
+		crimsonQ.SetConcurrency(consumerId, strconv.Itoa(concurrency))
 		return c.JSON("ok")
 	} else {
 		err := errors.New(Defs.ERRincorrectConsumerId)
