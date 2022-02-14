@@ -30,8 +30,8 @@ func PrintANSIlogo() {
 	fmt.Println()
 }
 
-func ToJson(qmsg interface{}) string {
-	j, err := json.Marshal(qmsg)
+func ToJson(obj interface{}) string {
+	j, err := json.Marshal(obj)
 	if err != nil {
 		log.Fatal(err)
 	}

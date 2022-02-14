@@ -119,6 +119,12 @@ func RC_Ping(con redcon.Conn, args ...[][]byte) error {
 	return nil
 }
 
+func RC_Consumer_Info(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	con.WriteString(crimsonQ.ConsumerInfo(consumerId).JsonStringify())
+	return nil
+}
+
 func RC_Quit(con redcon.Conn, args ...[][]byte) error {
 	con.WriteString("Bye!")
 	con.Close()

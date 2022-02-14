@@ -45,5 +45,6 @@ func InitCommands() {
 		"consumer.concurrency.set": {HTTP_Function: HTTP_Set_Concurrency, HTTP_Method: Defs.HTTP_POST, Redcon_Function: RC_Set_Concurrency, ArgsCmd: []string{"consumerId", "concurrency"}},
 		"msg.list.json":            {HTTP_Function: HTTP_Msg_Get_Status_Json, HTTP_Method: Defs.HTTP_GET, Redcon_Function: RC_Msg_Get_Status_Json, ArgsCmd: []string{"consumerId", "status"}},
 		"consumer.concurrency.ok":  {HTTP_Function: HTTP_ConsumerConcurrencyOk, HTTP_Method: Defs.HTTP_GET, Redcon_Function: RC_ConsumerConcurrencyOk, ArgsCmd: []string{"consumerId"}},
+		"consumer.info":            {HTTP_Function: HTTP_ConsumerInfo, HTTP_Method: Defs.HTTP_GET, Redcon_Function: RC_Consumer_Info, ArgsCmd: []string{"consumerId"}},
 	}
 }

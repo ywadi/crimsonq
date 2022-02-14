@@ -17,11 +17,11 @@ import (
 )
 
 type S_QDB struct {
-	QdbId            string
-	QdbPath          string
-	QdbTopicFilters  []string
-	Last_Active_Pull time.Time
-	Concurrency      int
+	QdbId            string    `json:"consumerId"`
+	QdbPath          string    `json:"-"`
+	QdbTopicFilters  []string  `json:"topics"`
+	Last_Active_Pull time.Time `json:"lastActive"`
+	Concurrency      int       `json:"concurrency"`
 }
 
 var DBpool map[string]*badger.DB
@@ -38,6 +38,10 @@ func (qdb *S_QDB) Init(QdbId string, QdbPath string) {
 	initDbPool()
 	qdb.CreateDB()
 	//RedconQ.PS.Publish("_system", fmt.Sprint("Initiated ", QdbId, time.Now()))
+}
+
+func (qdb *S_QDB) JsonStringify() string {
+	return Utils.ToJson(qdb)
 }
 
 func (qdb *S_QDB) GetTopics() []string {

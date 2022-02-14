@@ -158,6 +158,11 @@ func (goq *S_GOQ) ConsumerExists(consumerId string) bool {
 	}
 }
 
+func (goq *S_GOQ) ConsumerInfo(consumerId string) *S_QDB {
+	consumerQ := goq.QDBPool[consumerId]
+	return consumerQ
+}
+
 //Push to consumer
 func (goq *S_GOQ) PushConsumer(consumerId string, topic string, message string) string {
 	consumerQ := goq.QDBPool[consumerId]

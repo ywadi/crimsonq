@@ -99,6 +99,10 @@ func HTTP_Exists(c *fiber.Ctx) error {
 	return c.JSON(strconv.FormatBool(crimsonQ.ConsumerExists(string(c.Params("consumerId")))))
 }
 
+func HTTP_ConsumerInfo(c *fiber.Ctx) error {
+	return c.JSON(crimsonQ.ConsumerInfo(c.Params("consumerId")))
+}
+
 func HTTP_Consumer_Create(c *fiber.Ctx) error {
 	bodyData := PostBody{}
 	if err := c.BodyParser(&bodyData); err != nil {
