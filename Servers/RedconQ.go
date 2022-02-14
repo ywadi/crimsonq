@@ -29,7 +29,7 @@ func StartRedCon(addr string, cq *Structs.S_GOQ) {
 	go cq.Init()
 	HeartBeat()
 	crimsonQ = cq
-	log.Info("started server at %s", addr)
+	log.Info("Started server at %s", addr)
 	err := redcon.ListenAndServe(addr,
 		execCommand,
 		func(conn redcon.Conn) bool {
