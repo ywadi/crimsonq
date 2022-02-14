@@ -158,6 +158,11 @@ func (goq *S_GOQ) ConsumerExists(consumerId string) bool {
 	}
 }
 
+func (goq *S_GOQ) ConsumerInfo(consumerId string) *S_QDB {
+	consumerQ := goq.QDBPool[consumerId]
+	return consumerQ
+}
+
 //Push to consumer
 func (goq *S_GOQ) PushConsumer(consumerId string, topic string, message string) string {
 	consumerQ := goq.QDBPool[consumerId]
@@ -268,6 +273,10 @@ func (goq *S_GOQ) GetAllByStatusJson(consumerId string, status string) (string, 
 
 func (goq *S_GOQ) GetKeyCount(consumerId string) (map[string]uint16, error) {
 	consumerQ := goq.QDBPool[consumerId]
+	//Update last active if a get key count was requested.
+	//Used by heartbeat hence if beating then should stay alive
+	consumerQ.Last_Active_Pull = time.Now()
+	goq.UpdateQDBinDB(consumerId)
 	if goq.ConsumerExists(consumerId) {
 		_, Count := consumerQ.GetAllKeys()
 		return Count, nil

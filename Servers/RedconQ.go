@@ -29,7 +29,7 @@ func StartRedCon(addr string, cq *Structs.S_GOQ) {
 	go cq.Init()
 	HeartBeat()
 	crimsonQ = cq
-	log.Info("started server at %s", addr)
+	log.Info("Started server at %s", addr)
 	err := redcon.ListenAndServe(addr,
 		execCommand,
 		func(conn redcon.Conn) bool {
@@ -116,6 +116,12 @@ func execCommand(conn redcon.Conn, cmd redcon.Command) {
 
 func RC_Ping(con redcon.Conn, args ...[][]byte) error {
 	con.WriteString("Pong! " + string(args[0][0]))
+	return nil
+}
+
+func RC_Consumer_Info(con redcon.Conn, args ...[][]byte) error {
+	consumerId := string(args[0][0])
+	con.WriteString(crimsonQ.ConsumerInfo(consumerId).JsonStringify())
 	return nil
 }
 
