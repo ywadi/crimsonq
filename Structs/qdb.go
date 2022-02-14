@@ -164,7 +164,7 @@ func (qdb *S_QDB) Pull() (*S_QMSG, error) {
 	}
 	keySplit := strings.Split(string(k), ":")
 	if len(keySplit) < 2 {
-		return nil, errors.New("empty queue")
+		return nil, nil
 	}
 	msgRes, err := qdb.MoveMsg(keySplit[1], Defs.STATUS_PENDING, Defs.STATUS_ACTIVE, "")
 	if err != nil {
