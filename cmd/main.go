@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"reflect"
 	"strings"
 	"ywadi/crimsonq/Servers"
@@ -15,11 +17,6 @@ import (
 )
 
 var ctx = context.Background()
-
-func usage(w io.Writer) {
-	io.WriteString(w, "commands:\n")
-	io.WriteString(w, completer.Tree("    "))
-}
 
 var completer *readline.PrefixCompleter
 
@@ -33,15 +30,19 @@ func filterInput(r rune) (rune, bool) {
 }
 
 func main() {
+	hostPtr := flag.String("host", "localhost:9001", "Host to connect to with port, ex: localhost:9001")
+	passwordPtr := flag.String("password", "", "Password to connect to CrimsonQ! server.")
+	flag.Parse()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:9001",
-		Password: "crimsonQ!", // no password set
+		Addr:     *hostPtr,
+		Password: *passwordPtr, // no password set
 	})
+	fmt.Println("\033[31m")
 	fmt.Println(`
-	╔═╗┬─┐┬┌┬┐┌─┐┌─┐┌┐┌╔═╗ 
-	║  ├┬┘││││└─┐│ ││││║═╬╗
-	╚═╝┴└─┴┴ ┴└─┘└─┘┘└┘╚═╝╚`)
-	fmt.Println("CrimsonQ v1.0.0, gitsha: Ab#12455")
+╔═╗┬─┐┬┌┬┐┌─┐┌─┐┌┐┌╔═╗ 
+║  ├┬┘││││└─┐│ ││││║═╬╗
+╚═╝┴└─┴┴ ┴└─┘└─┘┘└┘╚═╝╚`)
+	fmt.Println("Cli Version 1.0.0 \033[0m")
 
 	Servers.InitCommands()
 	cmds := Servers.Commands
@@ -52,7 +53,7 @@ func main() {
 	}
 	completer.SetChildren(acItems)
 	l, err := readline.NewEx(&readline.Config{
-		Prompt:          "\033[31mcrimsonQ»\033[0m ",
+		Prompt:          "\033[32mcrimsonQ»\033[0m ",
 		HistoryFile:     "/tmp/readline.tmp",
 		AutoComplete:    completer,
 		InterruptPrompt: "^C",
@@ -91,10 +92,6 @@ func main() {
 		line = strings.TrimSpace(line)
 		cmdArgs := splitArgs(line)
 
-		if len(line) != 0 {
-
-		}
-
 		if strings.ToLower(cmdArgs[0].(string)) == "subscribe" {
 			pubsub := rdb.Subscribe(ctx, cmdArgs[1].(string))
 			//TODO: If error on command call, how to manage it
@@ -129,6 +126,10 @@ func main() {
 			} else {
 				fmt.Println(">", val.(string))
 			}
+		}
+
+		if strings.ToLower(cmdArgs[0].(string)) == "quit" {
+			os.Exit(0)
 		}
 
 	}
