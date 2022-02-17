@@ -37,12 +37,13 @@ func main() {
 		Addr:     *hostPtr,
 		Password: *passwordPtr, // no password set
 	})
+
 	fmt.Println("\033[31m")
 	fmt.Println(`
 ╔═╗┬─┐┬┌┬┐┌─┐┌─┐┌┐┌╔═╗ 
 ║  ├┬┘││││└─┐│ ││││║═╬╗
 ╚═╝┴└─┴┴ ┴└─┘└─┘┘└┘╚═╝╚`)
-	fmt.Println("Cli Version 1.0.0 \033[0m")
+	fmt.Println("Cli Version 0.5.0 \033[0m")
 
 	Servers.InitCommands()
 	cmds := Servers.Commands
