@@ -1,6 +1,7 @@
-version: "3.9"  # optional since v1.27.0
+version: "3.9"
 services:
   crimsonq:
+    image: yousefjwadi/crimsonq:latest
     build: .
     ports:
       - "9001:9001"
