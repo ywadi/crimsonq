@@ -36,7 +36,7 @@ func StartRedCon(addr string, cq *Structs.S_GOQ) {
 			ConnContext := ConnContext{Auth: false, SelectDB: ""}
 			conn.SetContext(ConnContext)
 			remoteIp := strings.Split(conn.RemoteAddr(), ":")[0]
-			fmt.Println("Client connected from ", remoteIp)
+			log.Info("Client connected from ", remoteIp)
 			if viper.GetString("RESP.ip_whitelist") == "*" {
 				return true
 			} else {
@@ -47,7 +47,7 @@ func StartRedCon(addr string, cq *Structs.S_GOQ) {
 		},
 		func(conn redcon.Conn, err error) {
 			// This is called when the connection has been closed
-			// log.Printf("closed: %s, err: %v", conn.RemoteAddr(), err)
+			log.Printf("closed: %s, err: %v", conn.RemoteAddr(), err)
 
 		},
 	)

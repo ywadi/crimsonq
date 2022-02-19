@@ -3,6 +3,7 @@ package Servers
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"ywadi/crimsonq/Defs"
@@ -59,11 +60,9 @@ func HTTP_Start(cq *Structs.S_GOQ) {
 			for _, av := range v.ArgsCmd {
 				route = route + "/:" + av
 			}
-			fmt.Println("|GET|" + route + "|" + strings.Join(v.ArgsCmd, " - ") + "|JSON|")
 			app.Get(route, v.HTTP_Function)
 		} else if v.HTTP_Method == Defs.HTTP_POST {
 			route := "/api/" + strings.ReplaceAll(k, ".", "/")
-			fmt.Println("|POST|" + route + "|" + strings.Join(v.ArgsCmd, " - ") + "|JSON|")
 			app.Post(route, v.HTTP_Function)
 		}
 
@@ -108,7 +107,7 @@ func HTTP_ConsumerInfo(c *fiber.Ctx) error {
 func HTTP_Consumer_Create(c *fiber.Ctx) error {
 	bodyData := PostBody{}
 	if err := c.BodyParser(&bodyData); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
 
@@ -127,7 +126,7 @@ func HTTP_Consumer_Create(c *fiber.Ctx) error {
 func HTTP_Set_Concurrency(c *fiber.Ctx) error {
 	bodyData := PostBody{}
 	if err := c.BodyParser(&bodyData); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
 	consumerId := bodyData.ConsumerId
