@@ -177,7 +177,7 @@ func (goq *S_GOQ) PushTopic(topic string, message string) map[string]string {
 	consumers := goq.QDBPool
 	for _, s := range consumers {
 		for _, x := range s.QdbTopicFilters {
-			if Utils.MQTTMatch(topic, x) {
+			if Utils.MQTTMatch(x, topic) {
 				qmsg := s.CreateAndPushQMSG(topic, message)
 				res[s.QdbId] = qmsg.Key
 			}

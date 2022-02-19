@@ -34,7 +34,7 @@ func HTTP_Start(cq *Structs.S_GOQ) {
 	app.Use(recover.New())
 	app.Use(cors.New())
 
-	app.Use(basicauth.New(basicauth.Config{
+	app.Use("/api/", basicauth.New(basicauth.Config{
 		Users: map[string]string{
 			viper.GetString("HTTP.username"): viper.GetString("HTTP.password"),
 		},
@@ -50,6 +50,8 @@ func HTTP_Start(cq *Structs.S_GOQ) {
 		c.Next()
 		return nil
 	})
+
+	app.Static("/", "../WebUI/dist")
 
 	for k, v := range Commands {
 		if v.HTTP_Method == Defs.HTTP_GET {
@@ -196,9 +198,7 @@ func HTTP_Msg_Keys(c *fiber.Ctx) error {
 
 	}
 	resp := []string{}
-	for _, s := range list {
-		resp = append(resp, s)
-	}
+	resp = append(resp, list...)
 	return c.JSON(resp)
 }
 
