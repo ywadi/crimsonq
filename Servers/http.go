@@ -62,6 +62,8 @@ func HTTP_Start(cq *Structs.S_GOQ) {
 		SigningKey: []byte("crimsonQ"),
 	}))
 
+	app.Get("/checkToken", checkToken)
+
 	for k, v := range Commands {
 		if v.HTTP_Method == Defs.HTTP_GET {
 			route := "/api/" + strings.ReplaceAll(k, ".", "/")
@@ -77,6 +79,13 @@ func HTTP_Start(cq *Structs.S_GOQ) {
 	}
 
 	app.Listen(":" + viper.GetString("HTTP.port"))
+}
+
+func checkToken(c *fiber.Ctx) error {
+	user := c.Locals("user").(*jwt.Token)
+	claims := user.Claims.(jwt.MapClaims)
+	name := claims["name"].(string)
+	return c.SendString("Welcome " + name)
 }
 
 func login(c *fiber.Ctx) error {
