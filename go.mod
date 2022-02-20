@@ -8,7 +8,10 @@ require (
 	github.com/cosiner/argv v0.1.0 // indirect
 	github.com/dgraph-io/badger/v3 v3.2103.2 // indirect
 	github.com/go-redis/redis/v8 v8.11.4 // indirect
-	github.com/gofiber/fiber/v2 v2.26.0 // indirect
+	github.com/gofiber/fiber/v2 v2.27.0 // indirect
+	github.com/gofiber/jwt/v3 v3.2.6 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
+	github.com/golang-jwt/jwt/v4 v4.3.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/peterh/liner v1.2.2 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
