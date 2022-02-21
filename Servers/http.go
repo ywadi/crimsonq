@@ -58,7 +58,7 @@ func HTTP_Start(cq *Structs.S_GOQ) {
 
 	app.Static("/", "../WebUI/dist")
 
-	app.Use(jwtware.New(jwtware.Config{
+	app.Use("/api/", jwtware.New(jwtware.Config{
 		SigningKey: []byte("crimsonQ"),
 	}))
 
