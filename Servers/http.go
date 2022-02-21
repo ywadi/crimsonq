@@ -3,16 +3,19 @@ package Servers
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
+	"time"
 	"ywadi/crimsonq/Defs"
 	"ywadi/crimsonq/Structs"
 	"ywadi/crimsonq/Utils"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/basicauth"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	jwtware "github.com/gofiber/jwt/v3"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/spf13/viper"
 )
 
@@ -29,16 +32,18 @@ type PostBody struct {
 	Concurrency   int    `json:"concurrency" xml:"concurrency" form:"concurrency"`
 }
 
+type PostAuthBody struct {
+	Username string `json"username" xml:"username" form:"username"`
+	Password string `json"password" xml:"password" form:"password"`
+}
+
 func HTTP_Start(cq *Structs.S_GOQ) {
+	fmt.Println("Starting Web Server.")
 	app = fiber.New()
+	app.Post("/login", login)
+
 	app.Use(recover.New())
 	app.Use(cors.New())
-
-	app.Use("/api/", basicauth.New(basicauth.Config{
-		Users: map[string]string{
-			viper.GetString("HTTP.username"): viper.GetString("HTTP.password"),
-		},
-	}))
 
 	app.Use(func(c *fiber.Ctx) error {
 		if viper.GetString("HTTP.ip_whitelist") != "*" {
@@ -53,23 +58,67 @@ func HTTP_Start(cq *Structs.S_GOQ) {
 
 	app.Static("/", "../WebUI/dist")
 
+	app.Use(jwtware.New(jwtware.Config{
+		SigningKey: []byte("crimsonQ"),
+	}))
+
+	app.Get("/checkToken", checkToken)
+
 	for k, v := range Commands {
 		if v.HTTP_Method == Defs.HTTP_GET {
 			route := "/api/" + strings.ReplaceAll(k, ".", "/")
 			for _, av := range v.ArgsCmd {
 				route = route + "/:" + av
 			}
-			fmt.Println("|GET|" + route + "|" + strings.Join(v.ArgsCmd, " - ") + "|JSON|")
 			app.Get(route, v.HTTP_Function)
 		} else if v.HTTP_Method == Defs.HTTP_POST {
 			route := "/api/" + strings.ReplaceAll(k, ".", "/")
-			fmt.Println("|POST|" + route + "|" + strings.Join(v.ArgsCmd, " - ") + "|JSON|")
 			app.Post(route, v.HTTP_Function)
 		}
 
 	}
 
 	app.Listen(":" + viper.GetString("HTTP.port"))
+}
+
+func checkToken(c *fiber.Ctx) error {
+	user := c.Locals("user").(*jwt.Token)
+	claims := user.Claims.(jwt.MapClaims)
+	name := claims["name"].(string)
+	return c.SendString("Welcome " + name)
+}
+
+func login(c *fiber.Ctx) error {
+	bodyData := PostAuthBody{}
+	if err := c.BodyParser(&bodyData); err != nil {
+		log.Println(err)
+		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
+	}
+	user := bodyData.Username
+	pass := bodyData.Password
+
+	// Throws Unauthorized error
+	if user != viper.GetString("HTTP.username") || pass != viper.GetString("HTTP.password") {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	// Create the Claims
+	claims := jwt.MapClaims{
+		"name":  bodyData.Username,
+		"admin": true,
+		"exp":   time.Now().Add(time.Hour * 72).Unix(),
+	}
+
+	// Create token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// Generate encoded token and send it as response.
+	t, err := token.SignedString([]byte("crimsonQ"))
+	if err != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	return c.JSON(fiber.Map{"token": t})
 }
 
 func HTTP_Ping(c *fiber.Ctx) error {
@@ -108,7 +157,7 @@ func HTTP_ConsumerInfo(c *fiber.Ctx) error {
 func HTTP_Consumer_Create(c *fiber.Ctx) error {
 	bodyData := PostBody{}
 	if err := c.BodyParser(&bodyData); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return fiber.NewError(fiber.StatusBadRequest, Defs.ERRIncorrectArgs)
 	}
 
