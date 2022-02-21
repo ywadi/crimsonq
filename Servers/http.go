@@ -40,11 +40,10 @@ type PostAuthBody struct {
 func HTTP_Start(cq *Structs.S_GOQ) {
 	fmt.Println("Starting Web Server.")
 	app = fiber.New()
-	app.Post("/login", login)
-
 	app.Use(recover.New())
 	app.Use(cors.New())
 
+	app.Post("/login", login)
 	app.Use(func(c *fiber.Ctx) error {
 		if viper.GetString("HTTP.ip_whitelist") != "*" {
 			grant := Utils.SliceContains(viper.GetStringSlice("HTTP.ip_whitelist"), c.IP())
