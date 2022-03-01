@@ -1,6 +1,6 @@
 
 
-# CrimsonQ
+# CrimsonQ 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/ywadi/crimsonq)
 ![GitHub](https://img.shields.io/github/license/ywadi/crimsonq)
 ![GitHub](https://img.shields.io/badge/Built%20On-Golang-lightgrey?logo=go)
