@@ -2,6 +2,7 @@ version: "3.9"
 services:
   crimsonq:
     image: yousefjwadi/crimsonq:latest
+    restart: unless-stopped	
     build: .
     ports:
       - "9001:9001"
