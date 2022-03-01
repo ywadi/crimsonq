@@ -5,6 +5,9 @@ WORKDIR $GOPATH/src/ywadi/crimsonq/
 COPY . .
 RUN go get -d -v
 RUN go build -o /go/bin/crimsonq
+WORKDIR $GOPATH/src/ywadi/crimsonq/cmd
+RUN go get -d -v
+RUN go build -o /go/bin/crimsonq-cli
 
 #Build CrimsonQ Dashboard 
 FROM node:12-alpine3.14 AS dashbuilder
@@ -21,6 +24,7 @@ RUN npm run build
 FROM alpine
 RUN apk update
 COPY --from=builder /go/bin/crimsonq /go/bin/crimsonq
+COPY --from=builder /go/bin/crimsonq-cli /bin/crimsonq-cli
 COPY --from=dashbuilder /crimsonQ-dashboard/dist/ /WebUI/
 RUN mkdir -p /CrimsonQ/.crimsonQ
 WORKDIR /CrimsonQ/.crimsonQ
