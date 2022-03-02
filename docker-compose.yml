@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   crimsonq:
+    restart: "unless-stopped"
     image: yousefjwadi/crimsonq:latest
     build: .
     ports:
