@@ -3,6 +3,7 @@ package Servers
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -132,12 +133,15 @@ func RC_Quit(con redcon.Conn, args ...[][]byte) error {
 }
 
 func RC_Auth(con redcon.Conn, args ...[][]byte) error {
-	if string(args[0][0]) == viper.GetString("RESP.password") {
+	respPassVal, _ := os.LookupEnv("CRIMSONQ_RESP_PASS")
+	if string(args[0][0]) == respPassVal {
 		cntxt := con.Context().(ConnContext)
 		cntxt.Auth = true
 		con.SetContext(cntxt)
 		con.WriteString("ok")
 
+	} else {
+		con.WriteError("Inccorect Auth.")
 	}
 	return nil
 }
