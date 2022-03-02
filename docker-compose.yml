@@ -9,5 +9,9 @@ services:
       - "8080:8080"
     volumes:
       - crimsonq:/CrimsonQ
+    environment:
+    - CRIMSONQ_RESP_PASS=cq!
+    - CRIMSONQ_HTTP_USER=admin
+    - CRIMSONQ_HTTP_PASS=password
 volumes:
   crimsonq: {}

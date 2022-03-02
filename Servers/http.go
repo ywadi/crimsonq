@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -97,7 +98,9 @@ func login(c *fiber.Ctx) error {
 	pass := bodyData.Password
 
 	// Throws Unauthorized error
-	if user != viper.GetString("HTTP.username") || pass != viper.GetString("HTTP.password") {
+	httpUserVal, _ := os.LookupEnv("CRIMSONQ_HTTP_USER")
+	httpPassVal, _ := os.LookupEnv("CRIMSONQ_HTTP_PASS")
+	if user != httpUserVal || pass != httpPassVal {
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
