@@ -1,5 +1,4 @@
 
-
 # CrimsonQ 
 ![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/yousefjwadi/crimsonq)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/ywadi/crimsonq)
